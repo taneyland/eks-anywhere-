@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/fluxcd/kustomize-controller/api/v1beta1"
 	"github.com/golang/mock/gomock"
 
 	"github.com/aws/eks-anywhere/pkg/api/v1alpha1"
@@ -23,6 +24,7 @@ type KubectlClient interface {
 	GetEksaCluster(ctx context.Context, cluster *types.Cluster, clusterName string) (*v1alpha1.Cluster, error)
 	GetEksaGitOpsConfig(ctx context.Context, gitOpsConfigName string, kubeconfigFile string, namespace string) (*v1alpha1.GitOpsConfig, error)
 	GetEksaOIDCConfig(ctx context.Context, oidcConfigName string, kubeconfigFile string, namespace string) (*v1alpha1.OIDCConfig, error)
+	GetKustomizeConfig(ctx context.Context, kustomizeConfigName string, kubeconfigFile string, namespace string) (*v1beta1.KustomizationSpec, error)
 	GetEksaVSphereDatacenterConfig(ctx context.Context, vsphereDatacenterConfigName string, kubeconfigFile string, namespace string) (*v1alpha1.VSphereDatacenterConfig, error)
 	GetEksaAWSIamConfig(ctx context.Context, awsIamConfigName string, kubeconfigFile string, namespace string) (*v1alpha1.AWSIamConfig, error)
 	SearchEksaGitOpsConfig(ctx context.Context, gitOpsConfigName string, kubeconfigFile string, namespace string) ([]*v1alpha1.GitOpsConfig, error)

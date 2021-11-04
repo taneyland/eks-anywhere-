@@ -3,6 +3,7 @@ package upgradevalidations
 import (
 	"context"
 	"fmt"
+	"path"
 
 	"github.com/aws/eks-anywhere/pkg/api/v1alpha1"
 	"github.com/aws/eks-anywhere/pkg/cluster"
@@ -45,6 +46,16 @@ func ValidateImmutableFields(ctx context.Context, k validations.KubectlClient, c
 		}
 		if !prevGitOps.Spec.Equal(&spec.GitOpsConfig.Spec) {
 			return fmt.Errorf("gitOps is immutable")
+		}
+
+		clusterConfigPath := spec.GitOpsConfig.Spec.Flux.Github.ClusterConfigPath
+		fluxSystemNamespace := spec.GitOpsConfig.Spec.Flux.Github.FluxSystemNamespace
+		kustomizeConfig, err := k.GetKustomizeConfig(ctx, fluxSystemNamespace, cluster.KubeconfigFile, fluxSystemNamespace)
+		if err != nil {
+			return err
+		}
+		if path.Dir(clusterConfigPath) != kustomizeConfig.Path {
+			return fmt.Errorf("clusterConfigPath in GitOpsConfig is incorrect. Visit documentation for steps to resolve")
 		}
 	}
 

@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	kustomizev1beta1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
 	etcdv1alpha3 "github.com/mrajashree/etcdadm-controller/api/v1alpha3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,6 +42,7 @@ var (
 	eksaOIDCResourceType              = fmt.Sprintf("oidcconfigs.%s", v1alpha1.GroupVersion.Group)
 	eksaAwsIamResourceType            = fmt.Sprintf("awsiamconfigs.%s", v1alpha1.GroupVersion.Group)
 	etcdadmClustersResourceType       = fmt.Sprintf("etcdadmclusters.%s", etcdv1alpha3.GroupVersion.Group)
+	fluxKustomizeResourceType         = fmt.Sprintf("kustomizations.%s", kustomizev1beta1.GroupVersion.Group)
 	bundlesResourceType               = fmt.Sprintf("bundles.%s", releasev1alpha1.GroupVersion.Group)
 	clusterResourceSetResourceType    = fmt.Sprintf("clusterresourcesets.%s", addons.GroupVersion.Group)
 )
@@ -888,6 +890,22 @@ func (k *Kubectl) GetEksaAWSIamConfig(ctx context.Context, awsIamConfigName stri
 	err = json.Unmarshal(stdOut.Bytes(), response)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing AWSIamConfig response: %v", err)
+	}
+
+	return response, nil
+}
+
+func (k *Kubectl) GetKustomizeConfig(ctx context.Context, kustomizeConfigName string, kubeconfigFile string, namespace string) (*kustomizev1beta1.KustomizationSpec, error) {
+	params := []string{"get", fluxKustomizeResourceType, kustomizeConfigName, "-o", "json", "--kubeconfig", kubeconfigFile, "--namespace", namespace}
+	stdOut, err := k.executable.Execute(ctx, params...)
+	if err != nil {
+		return nil, fmt.Errorf("error getting flux kustomize config: %v", err)
+	}
+
+	response := &kustomizev1beta1.KustomizationSpec{}
+	err = json.Unmarshal(stdOut.Bytes(), response)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing kustomize response: %v", err)
 	}
 
 	return response, nil

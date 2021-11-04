@@ -6,6 +6,7 @@ require (
 	github.com/aws/aws-sdk-go v1.38.40
 	github.com/aws/eks-anywhere/release v0.0.0-20210629184439-aded106d7d59
 	github.com/aws/eks-distro-build-tooling/release v0.0.0-20211103003257-a7e2379eae5e
+	github.com/fluxcd/kustomize-controller/api v0.11.1 // indirect
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-logr/logr v0.4.0
 	github.com/go-logr/zapr v0.4.0

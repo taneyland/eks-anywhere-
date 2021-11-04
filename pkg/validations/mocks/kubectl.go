@@ -11,6 +11,7 @@ import (
 	v1alpha1 "github.com/aws/eks-anywhere/pkg/api/v1alpha1"
 	executables "github.com/aws/eks-anywhere/pkg/executables"
 	types "github.com/aws/eks-anywhere/pkg/types"
+	v1beta1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -125,6 +126,21 @@ func (m *MockKubectlClient) GetEksaVSphereDatacenterConfig(ctx context.Context, 
 func (mr *MockKubectlClientMockRecorder) GetEksaVSphereDatacenterConfig(ctx, vsphereDatacenterConfigName, kubeconfigFile, namespace interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEksaVSphereDatacenterConfig", reflect.TypeOf((*MockKubectlClient)(nil).GetEksaVSphereDatacenterConfig), ctx, vsphereDatacenterConfigName, kubeconfigFile, namespace)
+}
+
+// GetKustomizeConfig mocks base method.
+func (m *MockKubectlClient) GetKustomizeConfig(ctx context.Context, kustomizeConfigName, kubeconfigFile, namespace string) (*v1beta1.KustomizationSpec, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetKustomizeConfig", ctx, kustomizeConfigName, kubeconfigFile, namespace)
+	ret0, _ := ret[0].(*v1beta1.KustomizationSpec)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetKustomizeConfig indicates an expected call of GetKustomizeConfig.
+func (mr *MockKubectlClientMockRecorder) GetKustomizeConfig(ctx, kustomizeConfigName, kubeconfigFile, namespace interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKustomizeConfig", reflect.TypeOf((*MockKubectlClient)(nil).GetKustomizeConfig), ctx, kustomizeConfigName, kubeconfigFile, namespace)
 }
 
 // SearchEksaGitOpsConfig mocks base method.

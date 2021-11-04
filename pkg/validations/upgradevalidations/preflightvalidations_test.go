@@ -3,9 +3,11 @@ package upgradevalidations_test
 import (
 	"errors"
 	"fmt"
+	"path"
 	"reflect"
 	"testing"
 
+	"github.com/fluxcd/kustomize-controller/api/v1beta1"
 	"github.com/golang/mock/gomock"
 	"k8s.io/apimachinery/pkg/version"
 
@@ -596,6 +598,9 @@ func TestPreflightValidations(t *testing.T) {
 					GitVersion: tc.clusterVersion,
 				},
 			}
+			kustomizeSpec := &v1beta1.KustomizationSpec{
+				Path: path.Dir(clusterSpec.GitOpsConfig.Spec.Flux.Github.ClusterConfigPath),
+			}
 
 			provider.EXPECT().DatacenterConfig().Return(existingProviderSpec).MaxTimes(1)
 			provider.EXPECT().ValidateNewSpec(ctx, workloadCluster, clusterSpec).Return(nil).MaxTimes(1)
@@ -607,6 +612,7 @@ func TestPreflightValidations(t *testing.T) {
 			k.EXPECT().GetClusters(ctx, workloadCluster).Return(tc.getClusterResponse, nil)
 			k.EXPECT().GetEksaCluster(ctx, workloadCluster, clusterSpec.Name).Return(existingClusterSpec.Cluster, nil)
 			k.EXPECT().GetEksaGitOpsConfig(ctx, clusterSpec.Spec.GitOpsRef.Name, gomock.Any(), gomock.Any()).Return(existingClusterSpec.GitOpsConfig, nil).MaxTimes(1)
+			k.EXPECT().GetKustomizeConfig(ctx, clusterSpec.GitOpsConfig.Spec.Flux.Github.FluxSystemNamespace, gomock.Any(), clusterSpec.GitOpsConfig.Spec.Flux.Github.FluxSystemNamespace).Return(kustomizeSpec, nil).MaxTimes(1)
 			k.EXPECT().GetEksaOIDCConfig(ctx, clusterSpec.Spec.IdentityProviderRefs[0].Name, gomock.Any(), gomock.Any()).Return(existingClusterSpec.OIDCConfig, nil).MaxTimes(1)
 			k.EXPECT().Version(ctx, workloadCluster).Return(versionResponse, nil)
 			upgradeValidations := upgradevalidations.New(opts)
