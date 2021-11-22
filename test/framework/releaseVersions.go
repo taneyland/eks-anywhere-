@@ -153,3 +153,11 @@ func prodReleases() (release *releasev1alpha1.Release, err error) {
 	}
 	return releases, nil
 }
+
+func setCodebuildSourceVersionEnvVar(branchName string) error {
+	err := os.Setenv("CODEBUILD_SOURCE_VERSION", branchName)
+	if err != nil {
+		return fmt.Errorf("error setting CODEBUILD_SOURCE_VERSION env var: %v", err)
+	}
+	return nil
+}

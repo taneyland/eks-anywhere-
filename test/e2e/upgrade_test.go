@@ -7,6 +7,7 @@ import (
 
 	"github.com/aws/eks-anywhere/internal/pkg/api"
 	"github.com/aws/eks-anywhere/pkg/api/v1alpha1"
+	"github.com/aws/eks-anywhere/pkg/semver"
 	"github.com/aws/eks-anywhere/test/framework"
 )
 
@@ -21,11 +22,31 @@ const (
 	vsphereNetwork2UpdateVar   = "/SDDC-Datacenter/network/sddc-cgw-network-2"
 	vsphereNetwork3UpdateVar   = "/SDDC-Datacenter/network/sddc-cgw-network-3"
 	clusterNamespace           = "test-namespace"
+	releaseBranch06            = "release-0.6"
+	releaseBranch05            = "release-0.5"
 )
 
 func runSimpleUpgradeFlow(test *framework.ClusterE2ETest, updateVersion v1alpha1.KubernetesVersion, clusterOpts ...framework.ClusterE2ETestOpt) {
 	test.GenerateClusterConfig()
 	test.CreateCluster()
+	test.UpgradeCluster(clusterOpts)
+	test.ValidateCluster(updateVersion)
+	test.StopIfFailed()
+	test.DeleteCluster()
+}
+
+func runInterVersionUpgradeFlowFromMain(test *framework.ClusterE2ETest, updateVersion v1alpha1.KubernetesVersion, clusterOpts ...framework.ClusterE2ETestOpt) {
+	test.GenerateClusterConfig(framework.ExecuteWithLatestMinorReleaseFromMain())
+	test.CreateCluster(framework.ExecuteWithLatestMinorReleaseFromMain())
+	test.UpgradeCluster(clusterOpts)
+	test.ValidateCluster(updateVersion)
+	test.StopIfFailed()
+	test.DeleteCluster()
+}
+
+func runInterVersionUpgradeFlowFromReleaseBranch(test *framework.ClusterE2ETest, updateVersion v1alpha1.KubernetesVersion, eksaVersion *semver.Version, clusterOpts ...framework.ClusterE2ETestOpt) {
+	test.GenerateClusterConfig(framework.ExecuteWithLatestMinorReleaseFromVersion(eksaVersion))
+	test.CreateCluster(framework.ExecuteWithLatestMinorReleaseFromVersion(eksaVersion))
 	test.UpgradeCluster(clusterOpts)
 	test.ValidateCluster(updateVersion)
 	test.StopIfFailed()
@@ -302,5 +323,41 @@ func TestVSphereKubernetes120BottlerocketTo121StackedEtcdUpgrade(t *testing.T) {
 		v1alpha1.Kube121,
 		framework.WithClusterUpgrade(api.WithKubernetesVersion(v1alpha1.Kube121)),
 		provider.WithProviderUpgrade(framework.UpdateBottlerocketTemplate121()),
+	)
+}
+
+func TestVSphereKubernetes120BottlerocketCreateWithLatestReleaseUpgradeWithMain(t *testing.T) {
+	provider := framework.NewVSphere(t, framework.WithBottleRocket120())
+	test := framework.NewClusterE2ETest(
+		t,
+		provider,
+		framework.WithClusterFiller(api.WithKubernetesVersion(v1alpha1.Kube120)),
+		framework.WithClusterFiller(api.WithControlPlaneCount(1)),
+		framework.WithClusterFiller(api.WithWorkerNodeCount(1)),
+	)
+	runInterVersionUpgradeFlowFromMain(
+		test,
+		v1alpha1.Kube121,
+		framework.WithClusterUpgrade(api.WithKubernetesVersion(v1alpha1.Kube121)),
+		provider.WithProviderUpgrade(framework.UpdateBottlerocketTemplate121()),
+	)
+}
+
+func TestVSphereKubernetes120BottlerocketCreateWithPrevMinorUpgradeWith060Branch(t *testing.T) {
+	provider := framework.NewVSphere(t, framework.WithBottleRocket120())
+	test := framework.NewClusterE2ETest(
+		t,
+		provider,
+		framework.WithClusterFiller(api.WithKubernetesVersion(v1alpha1.Kube120)),
+		framework.WithClusterFiller(api.WithControlPlaneCount(1)),
+		framework.WithClusterFiller(api.WithWorkerNodeCount(1)),
+	)
+	runInterVersionUpgradeFlowFromReleaseBranch(
+		test,
+		v1alpha1.Kube121,
+		framework.Eksa060(),
+		framework.WithClusterUpgrade(api.WithKubernetesVersion(v1alpha1.Kube121)),
+		provider.WithProviderUpgrade(framework.UpdateBottlerocketTemplate121()),
+		framework.FromReleaseBranch(releaseBranch06),
 	)
 }
