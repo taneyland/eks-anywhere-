@@ -15,26 +15,35 @@ func withKubeconfig(kubeconfigFile string) CommandOpt {
 	return appendOpt("--kubeconfig", kubeconfigFile)
 }
 
-func ExecuteWithEksaVersion(version *semver.Version) CommandOpt {
+func ExecuteWithEksaVersion(version *semver.Version, branchName string) CommandOpt {
 	return func(binaryPath *string, args *[]string) (err error) {
 		b, err := GetReleaseBinaryFromVersion(version)
 		*binaryPath = b
+		if err := setCodebuildSourceVersionEnvVar(branchName); err != nil {
+			return err
+		}
 		return err
 	}
 }
 
-func ExecuteWithLatestMinorReleaseFromVersion(version *semver.Version) CommandOpt {
+func ExecuteWithLatestMinorReleaseFromVersion(version *semver.Version, branchName string) CommandOpt {
 	return func(binaryPath *string, args *[]string) (err error) {
 		b, err := GetLatestMinorReleaseBinaryFromVersion(version)
 		*binaryPath = b
+		if err := setCodebuildSourceVersionEnvVar(branchName); err != nil {
+			return err
+		}
 		return err
 	}
 }
 
-func ExecuteWithLatestMinorReleaseFromMain() CommandOpt {
+func ExecuteWithLatestMinorReleaseFromMain(branchName string) CommandOpt {
 	return func(binaryPath *string, args *[]string) (err error) {
 		b, err := GetLatestMinorReleaseBinaryFromMain()
 		*binaryPath = b
+		if err := setCodebuildSourceVersionEnvVar(branchName); err != nil {
+			return err
+		}
 		return err
 	}
 }
