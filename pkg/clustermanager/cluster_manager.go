@@ -242,12 +242,6 @@ func (c *ClusterManager) CreateWorkloadCluster(ctx context.Context, managementCl
 		return nil, fmt.Errorf("error waiting for workload cluster control plane to be ready: %v", err)
 	}
 
-	logger.V(3).Info("Waiting for controlplane and worker machines to be ready")
-	labels := []string{clusterv1.MachineControlPlaneLabelName, clusterv1.MachineDeploymentLabelName}
-	if err = c.waitForNodesReady(ctx, managementCluster, workloadCluster.Name, labels, types.WithNodeRef(), types.WithNodeHealthy()); err != nil {
-		return nil, err
-	}
-
 	logger.V(3).Info("Waiting for workload cluster control plane replicas to be ready after creation")
 	err = c.waitForControlPlaneReplicasReady(ctx, managementCluster, clusterSpec)
 	if err != nil {
@@ -258,6 +252,12 @@ func (c *ClusterManager) CreateWorkloadCluster(ctx context.Context, managementCl
 	err = c.waitForMachineDeploymentReplicasReady(ctx, managementCluster, clusterSpec)
 	if err != nil {
 		return nil, fmt.Errorf("error waiting for workload cluster machinedeployment replicas to be ready: %v", err)
+	}
+
+	logger.V(3).Info("Waiting for controlplane and worker machines to be ready")
+	labels := []string{clusterv1.MachineControlPlaneLabelName, clusterv1.MachineDeploymentLabelName}
+	if err = c.waitForNodesReady(ctx, managementCluster, workloadCluster.Name, labels, types.WithNodeRef(), types.WithNodeHealthy()); err != nil {
+		return nil, err
 	}
 
 	err = cluster.ApplyExtraObjects(ctx, c.clusterClient, workloadCluster, clusterSpec)
@@ -697,6 +697,10 @@ func (c *ClusterManager) waitForControlPlaneReplicasReady(ctx context.Context, m
 		return c.clusterClient.ValidateControlPlaneNodes(ctx, managementCluster, clusterSpec.Name)
 	}
 
+	policy := func(_ int, _ error) (bool, time.Duration) {
+		return true, c.machineBackoff * time.Duration(clusterSpec.Spec.ControlPlaneConfiguration.Count)
+	}
+
 	err := isCpReady()
 	if err == nil {
 		return nil
@@ -707,7 +711,7 @@ func (c *ClusterManager) waitForControlPlaneReplicasReady(ctx context.Context, m
 		timeout = c.machinesMinWait
 	}
 
-	r := retrier.New(timeout)
+	r := retrier.New(timeout, retrier.WithRetryPolicy(policy))
 	if err := r.Retry(isCpReady); err != nil {
 		return fmt.Errorf("retries exhausted waiting for controlplane replicas to be ready: %v", err)
 	}
