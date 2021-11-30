@@ -237,6 +237,8 @@ func TestClusterManagerCreateWorkloadClusterSuccess(t *testing.T) {
 	m.provider.EXPECT().RunPostControlPlaneCreation(ctx, clusterSpec, cluster)
 	m.client.EXPECT().WaitForControlPlaneReady(ctx, cluster, "60m", clusterName)
 	m.client.EXPECT().GetMachines(ctx, cluster, cluster.Name).Return([]types.Machine{}, nil)
+	m.client.EXPECT().ValidateControlPlaneNodes(ctx, cluster, clusterName)
+	m.client.EXPECT().ValidateWorkerNodes(ctx, cluster, clusterName)
 	kubeconfig := []byte("content")
 	m.client.EXPECT().GetWorkloadKubeconfig(ctx, clusterName, cluster).Return(kubeconfig, nil)
 	m.provider.EXPECT().UpdateKubeConfig(&kubeconfig, clusterName)
@@ -270,6 +272,8 @@ func TestClusterManagerCreateWorkloadClusterWithExternalEtcdSuccess(t *testing.T
 	m.provider.EXPECT().RunPostControlPlaneCreation(ctx, clusterSpec, cluster)
 	m.client.EXPECT().WaitForControlPlaneReady(ctx, cluster, "60m", clusterName)
 	m.client.EXPECT().GetMachines(ctx, cluster, cluster.Name).Return([]types.Machine{}, nil)
+	m.client.EXPECT().ValidateControlPlaneNodes(ctx, cluster, clusterName)
+	m.client.EXPECT().ValidateWorkerNodes(ctx, cluster, clusterName)
 	kubeconfig := []byte("content")
 	m.client.EXPECT().GetWorkloadKubeconfig(ctx, clusterName, cluster).Return(kubeconfig, nil)
 	m.provider.EXPECT().UpdateKubeConfig(&kubeconfig, clusterName)
@@ -309,6 +313,8 @@ func TestClusterManagerCreateWorkloadClusterSuccessWithExtraObjects(t *testing.T
 	m.provider.EXPECT().RunPostControlPlaneCreation(ctx, clusterSpec, wantCluster)
 	m.client.EXPECT().WaitForControlPlaneReady(ctx, cluster, "60m", clusterName)
 	m.client.EXPECT().GetMachines(ctx, cluster, cluster.Name).Return([]types.Machine{}, nil)
+	m.client.EXPECT().ValidateControlPlaneNodes(ctx, cluster, clusterName)
+	m.client.EXPECT().ValidateWorkerNodes(ctx, cluster, clusterName)
 	kubeconfig := []byte("content")
 	m.client.EXPECT().GetWorkloadKubeconfig(ctx, clusterName, cluster).Return(kubeconfig, nil)
 	m.provider.EXPECT().UpdateKubeConfig(&kubeconfig, clusterName)
@@ -354,6 +360,8 @@ func TestClusterManagerCreateWorkloadClusterErrorApplyingExtraObjects(t *testing
 	m.provider.EXPECT().RunPostControlPlaneCreation(ctx, clusterSpec, wantCluster)
 	m.client.EXPECT().WaitForControlPlaneReady(ctx, cluster, "60m", clusterName)
 	m.client.EXPECT().GetMachines(ctx, cluster, cluster.Name).Return([]types.Machine{}, nil)
+	m.client.EXPECT().ValidateControlPlaneNodes(ctx, cluster, clusterName)
+	m.client.EXPECT().ValidateWorkerNodes(ctx, cluster, clusterName)
 	kubeconfig := []byte("content")
 	m.client.EXPECT().GetWorkloadKubeconfig(ctx, clusterName, cluster).Return(kubeconfig, nil)
 	m.provider.EXPECT().UpdateKubeConfig(&kubeconfig, clusterName)
@@ -424,6 +432,8 @@ func TestClusterManagerCreateWorkloadClusterWaitForMachinesSuccessAfterRetries(t
 	m.client.EXPECT().WaitForControlPlaneReady(ctx, cluster, "60m", clusterName)
 	// Fail a bunch of times
 	m.client.EXPECT().GetMachines(ctx, cluster, cluster.Name).Times(retries-5).Return(nil, errors.New("error get machines"))
+	m.client.EXPECT().ValidateControlPlaneNodes(ctx, cluster, clusterName)
+	m.client.EXPECT().ValidateWorkerNodes(ctx, cluster, clusterName)
 	// Return a machine with no nodeRef  times
 	m.client.EXPECT().GetMachines(ctx, cluster, cluster.Name).Times(3).Return([]types.Machine{{Metadata: types.MachineMetadata{
 		Labels: map[string]string{clusterv1.MachineControlPlaneLabelName: ""},
