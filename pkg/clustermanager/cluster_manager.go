@@ -244,8 +244,20 @@ func (c *ClusterManager) CreateWorkloadCluster(ctx context.Context, managementCl
 
 	logger.V(3).Info("Waiting for controlplane and worker machines to be ready")
 	labels := []string{clusterv1.MachineControlPlaneLabelName, clusterv1.MachineDeploymentLabelName}
-	if err = c.waitForNodesReady(ctx, managementCluster, workloadCluster.Name, labels, types.WithNodeRef()); err != nil {
+	if err = c.waitForNodesReady(ctx, managementCluster, workloadCluster.Name, labels, types.WithNodeRef(), types.WithNodeHealthy()); err != nil {
 		return nil, err
+	}
+
+	logger.V(3).Info("Waiting for workload cluster control plane replicas to be ready after creation")
+	err = c.waitForControlPlaneReplicasReady(ctx, managementCluster, clusterSpec)
+	if err != nil {
+		return nil, fmt.Errorf("error waiting for workload cluster control plane replicas to be ready: %v", err)
+	}
+
+	logger.V(3).Info("Waiting for workload cluster machine deployment replicas to be ready after creation")
+	err = c.waitForMachineDeploymentReplicasReady(ctx, managementCluster, clusterSpec)
+	if err != nil {
+		return nil, fmt.Errorf("error waiting for workload cluster machinedeployment replicas to be ready: %v", err)
 	}
 
 	err = cluster.ApplyExtraObjects(ctx, c.clusterClient, workloadCluster, clusterSpec)
@@ -680,7 +692,7 @@ func collectDiagnosticBundle(ctx context.Context, bundle diagnostics.DiagnosticB
 	return nil
 }
 
-func (c *ClusterManager) waitForControlPlaneReplicasReady(ctx context.Context, managementCluster *types.Cluster, clusterSpec *cluster.Spec) error {
+func (c *ClusterManager) waitForControlPlaneReplicasReady(ctx context.Context, managementCluster *types.Cluster, clusterSpec *cluster.Spec, checkers ...types.NodeReadyChecker) error {
 	isCpReady := func() error {
 		return c.clusterClient.ValidateControlPlaneNodes(ctx, managementCluster, clusterSpec.Name)
 	}
@@ -702,7 +714,7 @@ func (c *ClusterManager) waitForControlPlaneReplicasReady(ctx context.Context, m
 	return nil
 }
 
-func (c *ClusterManager) waitForMachineDeploymentReplicasReady(ctx context.Context, managementCluster *types.Cluster, clusterSpec *cluster.Spec) error {
+func (c *ClusterManager) waitForMachineDeploymentReplicasReady(ctx context.Context, managementCluster *types.Cluster, clusterSpec *cluster.Spec, checkers ...types.NodeReadyChecker) error {
 	isMdReady := func() error {
 		return c.clusterClient.ValidateWorkerNodes(ctx, managementCluster, clusterSpec.Name)
 	}
