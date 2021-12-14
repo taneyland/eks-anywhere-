@@ -2,6 +2,7 @@ package dependencies_test
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -13,13 +14,19 @@ import (
 
 type factoryTest struct {
 	*WithT
-	clusterConfigFile string
-	clusterSpec       *cluster.Spec
-	ctx               context.Context
+	clusterConfigFile  string
+	clusterSpec        *cluster.Spec
+	ctx                context.Context
+	hardwareConfigFile string
 }
 
 func newTest(t *testing.T) *factoryTest {
 	clusterConfigFile := "testdata/cluster_vsphere.yaml"
+	// Disable tools image executable for the tests
+	if err := os.Setenv("MR_TOOLS_DISABLE", "true"); err != nil {
+		t.Fatal(err)
+	}
+
 	return &factoryTest{
 		WithT:             NewGomegaWithT(t),
 		clusterConfigFile: clusterConfigFile,
@@ -31,18 +38,19 @@ func newTest(t *testing.T) *factoryTest {
 func TestFactoryBuildWithProvider(t *testing.T) {
 	tt := newTest(t)
 	deps, err := dependencies.NewFactory().
-		WithProvider(tt.clusterConfigFile, tt.clusterSpec.Cluster, false).
-		Build()
+		WithProvider(tt.clusterConfigFile, tt.clusterSpec.Cluster, false, tt.hardwareConfigFile).
+		Build(context.Background())
 
 	tt.Expect(err).To(BeNil())
 	tt.Expect(deps.Provider).NotTo(BeNil())
+	tt.Expect(deps.DockerClient).To(BeNil(), "it only builds deps for vsphere")
 }
 
 func TestFactoryBuildWithClusterManager(t *testing.T) {
 	tt := newTest(t)
 	deps, err := dependencies.NewFactory().
-		WithClusterManager().
-		Build()
+		WithClusterManager(tt.clusterSpec.Cluster).
+		Build(context.Background())
 
 	tt.Expect(err).To(BeNil())
 	tt.Expect(deps.ClusterManager).NotTo(BeNil())
@@ -52,8 +60,8 @@ func TestFactoryBuildWithMultipleDependencies(t *testing.T) {
 	tt := newTest(t)
 	deps, err := dependencies.NewFactory().
 		WithBootstrapper().
-		WithClusterManager().
-		WithProvider(tt.clusterConfigFile, tt.clusterSpec.Cluster, false).
+		WithClusterManager(tt.clusterSpec.Cluster).
+		WithProvider(tt.clusterConfigFile, tt.clusterSpec.Cluster, false, tt.hardwareConfigFile).
 		WithFluxAddonClient(tt.ctx, tt.clusterSpec.Cluster, tt.clusterSpec.GitOpsConfig).
 		WithWriter().
 		WithDiagnosticCollectorImage("public.ecr.aws/collector").
@@ -61,7 +69,7 @@ func TestFactoryBuildWithMultipleDependencies(t *testing.T) {
 		WithCollectorFactory().
 		WithTroubleshoot().
 		WithCAPIManager().
-		Build()
+		Build(context.Background())
 
 	tt.Expect(err).To(BeNil())
 	tt.Expect(deps.Bootstrapper).NotTo(BeNil())

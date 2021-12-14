@@ -18,6 +18,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const BundlesKind = "Bundles"
+
 // BundlesSpec defines the desired state of Bundles
 type BundlesSpec struct {
 	// Monotonically increasing release number
@@ -67,11 +69,13 @@ type VersionsBundle struct {
 	Docker                 DockerBundle                `json:"docker"`
 	Eksa                   EksaBundle                  `json:"eksa"`
 	Cilium                 CiliumBundle                `json:"cilium"`
+	Kindnetd               KindnetdBundle              `json:"kindnetd"`
 	Flux                   FluxBundle                  `json:"flux"`
 	BottleRocketBootstrap  BottlerocketBootstrapBundle `json:"bottlerocketBootstrap"`
 	BottleRocketAdmin      BottlerocketAdminBundle     `json:"bottlerocketAdmin"`
 	ExternalEtcdBootstrap  EtcdadmBootstrapBundle      `json:"etcdadmBootstrap"`
 	ExternalEtcdController EtcdadmControllerBundle     `json:"etcdadmController"`
+	Tinkerbell             TinkerbellBundle            `json:"tinkerbell"`
 }
 
 type EksDRelease struct {
@@ -191,6 +195,11 @@ type CiliumBundle struct {
 	Manifest Manifest `json:"manifest"`
 }
 
+type KindnetdBundle struct {
+	Version  string   `json:"version,omitempty"`
+	Manifest Manifest `json:"manifest"`
+}
+
 type FluxBundle struct {
 	Version                string `json:"version,omitempty"`
 	SourceController       Image  `json:"sourceController"`
@@ -221,4 +230,12 @@ type EtcdadmControllerBundle struct {
 	KubeProxy  Image    `json:"kubeProxy"`
 	Components Manifest `json:"components"`
 	Metadata   Manifest `json:"metadata"`
+}
+
+type TinkerbellBundle struct {
+	Version              string   `json:"version"`
+	ClusterAPIController Image    `json:"clusterAPIController"`
+	Components           Manifest `json:"components"`
+	Metadata             Manifest `json:"metadata"`
+	ClusterTemplate      Manifest `json:"clusterTemplate"`
 }

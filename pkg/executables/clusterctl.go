@@ -13,6 +13,7 @@ import (
 	"github.com/aws/eks-anywhere/pkg/cluster"
 	"github.com/aws/eks-anywhere/pkg/clusterapi"
 	"github.com/aws/eks-anywhere/pkg/constants"
+	"github.com/aws/eks-anywhere/pkg/features"
 	"github.com/aws/eks-anywhere/pkg/filewriter"
 	"github.com/aws/eks-anywhere/pkg/providers"
 	"github.com/aws/eks-anywhere/pkg/templater"
@@ -33,8 +34,8 @@ const (
 var clusterctlConfigTemplate string
 
 type Clusterctl struct {
-	executable Executable
-	writer     filewriter.FileWriter
+	Executable
+	writer filewriter.FileWriter
 }
 
 type clusterctlConfiguration struct {
@@ -48,7 +49,7 @@ type clusterctlConfiguration struct {
 
 func NewClusterctl(executable Executable, writer filewriter.FileWriter) *Clusterctl {
 	return &Clusterctl{
-		executable: executable,
+		Executable: executable,
 		writer:     writer,
 	}
 }
@@ -148,7 +149,7 @@ func (c *Clusterctl) MoveManagement(ctx context.Context, from, to *types.Cluster
 	if from.KubeconfigFile != "" {
 		params = append(params, "--kubeconfig", from.KubeconfigFile)
 	}
-	_, err := c.executable.Execute(ctx, params...)
+	_, err := c.Execute(ctx, params...)
 	if err != nil {
 		return fmt.Errorf("failed moving management cluster: %v", err)
 	}
@@ -156,7 +157,7 @@ func (c *Clusterctl) MoveManagement(ctx context.Context, from, to *types.Cluster
 }
 
 func (c *Clusterctl) GetWorkloadKubeconfig(ctx context.Context, clusterName string, cluster *types.Cluster) ([]byte, error) {
-	stdOut, err := c.executable.Execute(
+	stdOut, err := c.Execute(
 		ctx, "get", "kubeconfig", clusterName,
 		"--kubeconfig", cluster.KubeconfigFile,
 		"--namespace", constants.EksaSystemNamespace,
@@ -203,7 +204,7 @@ func (c *Clusterctl) InitInfrastructure(ctx context.Context, clusterSpec *cluste
 		return err
 	}
 
-	_, err = c.executable.ExecuteWithEnv(ctx, envMap, params...)
+	_, err = c.ExecuteWithEnv(ctx, envMap, params...)
 	if err != nil {
 		return fmt.Errorf("error executing init: %v", err)
 	}
@@ -218,6 +219,11 @@ func (c *Clusterctl) buildConfig(clusterSpec *cluster.Spec, clusterName string, 
 	path, err := os.Getwd()
 	if err != nil {
 		return nil, err
+	}
+
+	tinkerbellProvider := "false"
+	if features.IsActive(features.TinkerbellProvider()) {
+		tinkerbellProvider = "true"
 	}
 
 	data := map[string]string{
@@ -263,6 +269,8 @@ func (c *Clusterctl) buildConfig(clusterSpec *cluster.Spec, clusterName string, 
 		"DockerProviderVersion":                           bundle.Docker.Version,
 		"VSphereProviderVersion":                          bundle.VSphere.Version,
 		"AwsProviderVersion":                              bundle.Aws.Version,
+		"TinkerbellProviderVersion":                       "v0.1.0", // TODO - version should come from the bundle
+		"IsActiveTinkerbellProvider":                      tinkerbellProvider,
 		"ClusterApiProviderVersion":                       bundle.ClusterAPI.Version,
 		"KubeadmControlPlaneProviderVersion":              bundle.ControlPlane.Version,
 		"KubeadmBootstrapProviderVersion":                 bundle.Bootstrap.Version,
@@ -334,7 +342,7 @@ func (c *Clusterctl) Upgrade(ctx context.Context, managementCluster *types.Clust
 		return fmt.Errorf("failed generating provider env map for clusterctl upgrade: %v", err)
 	}
 
-	if _, err = c.executable.ExecuteWithEnv(ctx, providerEnvMap, upgradeCommand...); err != nil {
+	if _, err = c.ExecuteWithEnv(ctx, providerEnvMap, upgradeCommand...); err != nil {
 		return fmt.Errorf("failed running upgrade apply with clusterctl: %v", err)
 	}
 
@@ -383,7 +391,7 @@ func (c *Clusterctl) InstallEtcdadmProviders(ctx context.Context, clusterSpec *c
 		return err
 	}
 
-	_, err = c.executable.ExecuteWithEnv(ctx, envMap, params...)
+	_, err = c.ExecuteWithEnv(ctx, envMap, params...)
 	if err != nil {
 		return fmt.Errorf("error executing init: %v", err)
 	}

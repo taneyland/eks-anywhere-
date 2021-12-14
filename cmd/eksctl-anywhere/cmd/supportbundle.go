@@ -19,11 +19,12 @@ import (
 )
 
 type createSupportBundleOptions struct {
-	fileName     string
-	wConfig      string
-	since        string
-	sinceTime    string
-	bundleConfig string
+	fileName         string
+	wConfig          string
+	since            string
+	sinceTime        string
+	bundleConfig     string
+	hardwareFileName string
 }
 
 func (csbo *createSupportBundleOptions) kubeConfig(clusterName string) string {
@@ -93,12 +94,13 @@ func (csbo *createSupportBundleOptions) createBundle(ctx context.Context, since,
 	}
 
 	deps, err := dependencies.ForSpec(ctx, clusterSpec).
-		WithProvider(csbo.fileName, clusterSpec.Cluster, cc.skipIpCheck).
+		WithProvider(csbo.fileName, clusterSpec.Cluster, cc.skipIpCheck, csbo.hardwareFileName).
 		WithDiagnosticBundleFactory().
-		Build()
+		Build(ctx)
 	if err != nil {
 		return err
 	}
+	defer close(ctx, deps)
 
 	supportBundle, err := deps.DignosticCollectorFactory.DiagnosticBundle(clusterSpec, deps.Provider, csbo.kubeConfig(clusterSpec.Name), bundleConfig)
 	if err != nil {

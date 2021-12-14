@@ -19,7 +19,8 @@ import (
 )
 
 type generateSupportBundleOptions struct {
-	fileName string
+	fileName         string
+	hardwareFileName string
 }
 
 var gsbo = &generateSupportBundleOptions{}
@@ -92,12 +93,13 @@ func (gsbo *generateSupportBundleOptions) generateBundleConfig(ctx context.Conte
 	}
 
 	deps, err := dependencies.ForSpec(ctx, clusterSpec).
-		WithProvider(f, clusterSpec.Cluster, cc.skipIpCheck).
+		WithProvider(f, clusterSpec.Cluster, cc.skipIpCheck, gsbo.hardwareFileName).
 		WithDiagnosticBundleFactory().
-		Build()
+		Build(ctx)
 	if err != nil {
 		return nil, err
 	}
+	defer close(ctx, deps)
 
 	return deps.DignosticCollectorFactory.DiagnosticBundleFromSpec(clusterSpec, deps.Provider, gsbo.kubeConfig(clusterSpec.Name))
 }

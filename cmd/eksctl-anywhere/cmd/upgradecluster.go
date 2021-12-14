@@ -20,8 +20,9 @@ import (
 
 type upgradeClusterOptions struct {
 	clusterOptions
-	wConfig    string
-	forceClean bool
+	wConfig          string
+	forceClean       bool
+	hardwareFileName string
 }
 
 func (uc *upgradeClusterOptions) kubeConfig(clusterName string) string {
@@ -79,18 +80,19 @@ func (uc *upgradeClusterOptions) upgradeCluster(ctx context.Context) error {
 		return err
 	}
 
-	deps, err := dependencies.ForSpec(ctx, clusterSpec).
+	deps, err := dependencies.ForSpec(ctx, clusterSpec).WithExecutableMountDirs(cc.mountDirs()...).
 		WithBootstrapper().
-		WithClusterManager().
-		WithProvider(uc.fileName, clusterSpec.Cluster, cc.skipIpCheck).
+		WithClusterManager(clusterSpec.Cluster).
+		WithProvider(uc.fileName, clusterSpec.Cluster, cc.skipIpCheck, uc.hardwareFileName).
 		WithFluxAddonClient(ctx, clusterSpec.Cluster, clusterSpec.GitOpsConfig).
 		WithWriter().
 		WithCAPIManager().
 		WithKubectl().
-		Build()
+		Build(ctx)
 	if err != nil {
 		return err
 	}
+	defer cleanup(ctx, deps, &err)
 
 	upgradeCluster := workflows.NewUpgrade(
 		deps.Bootstrapper,
@@ -129,9 +131,6 @@ func (uc *upgradeClusterOptions) upgradeCluster(ctx context.Context) error {
 	upgradeValidations := upgradevalidations.New(validationOpts)
 
 	err = upgradeCluster.Run(ctx, clusterSpec, cluster, upgradeValidations, uc.forceClean)
-	if err == nil {
-		deps.Writer.CleanUpTemp()
-	}
 	return err
 }
 
