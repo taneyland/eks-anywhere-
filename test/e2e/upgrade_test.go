@@ -44,10 +44,10 @@ func runInterVersionUpgradeFlowFromMain(test *framework.ClusterE2ETest, updateVe
 	test.DeleteCluster()
 }
 
-func runInterVersionUpgradeFlowFromReleaseBranch(test *framework.ClusterE2ETest, updateVersion v1alpha1.KubernetesVersion, eksaVersion *semver.Version, clusterOpts ...framework.ClusterE2ETestOpt) {
-	test.GenerateClusterConfig(framework.WithLatestMinorReleaseFromVersion(eksaVersion, branchName))
-	test.CreateCluster(framework.WithLatestMinorReleaseFromVersion(eksaVersion, branchName))
-	test.UpgradeCluster(clusterOpts)
+func runInterVersionUpgradeFlowFromReleaseBranch(test *framework.ClusterE2ETest, updateVersion v1alpha1.KubernetesVersion, eksaVersion *semver.Version, branchName string, clusterOpts ...framework.ClusterE2ETestOpt) {
+	test.GenerateClusterConfig(framework.ExecuteWithLatestMinorReleaseFromVersion(eksaVersion, branchName))
+	test.CreateCluster(framework.ExecuteWithLatestMinorReleaseFromVersion(eksaVersion, branchName))
+	test.UpgradeCluster(clusterOpts, framework.ExecuteWithEksaVersion(eksaVersion, branchName))
 	test.ValidateCluster(updateVersion)
 	test.StopIfFailed()
 	test.DeleteCluster()
@@ -338,6 +338,7 @@ func TestVSphereKubernetes120BottlerocketCreateWithLatestReleaseUpgradeWithMain(
 	runInterVersionUpgradeFlowFromMain(
 		test,
 		v1alpha1.Kube121,
+
 		framework.WithClusterUpgrade(api.WithKubernetesVersion(v1alpha1.Kube121)),
 		provider.WithProviderUpgrade(framework.UpdateBottlerocketTemplate121()),
 	)
@@ -356,9 +357,9 @@ func TestVSphereKubernetes120BottlerocketCreateWithPrevMinorUpgradeWith060Branch
 		test,
 		v1alpha1.Kube121,
 		framework.Eksa060(),
+		releaseBranch06,
 		framework.WithClusterUpgrade(api.WithKubernetesVersion(v1alpha1.Kube121)),
 		provider.WithProviderUpgrade(framework.UpdateBottlerocketTemplate121()),
-		framework.WithLatestMinorReleaseFromVersion(framework.Eksa060(), releaseBranch06),
 	)
 }
 
@@ -375,7 +376,7 @@ func TestDockerKubernetes120CreateWithPrevMinorUpgradeWith060Branch(t *testing.T
 		test,
 		v1alpha1.Kube121,
 		framework.Eksa060(),
+		releaseBranch06,
 		framework.WithClusterUpgrade(api.WithKubernetesVersion(v1alpha1.Kube121)),
-		framework.FromReleaseBranch(releaseBranch06),
 	)
 }

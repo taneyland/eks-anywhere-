@@ -19,10 +19,10 @@ const (
 	releaseBinaryName    = "eksctl-anywhere"
 )
 
-func GetLatestMinorReleaseBinaryFromMain() (binaryPath string, err error) {
+func GetLatestMinorReleaseBinaryFromMain() (binaryPath, version string, err error) {
 	releases, err := prodReleases()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	var latestRelease *releasev1alpha1.EksARelease
 	for _, release := range releases.Spec.Releases {
@@ -33,15 +33,15 @@ func GetLatestMinorReleaseBinaryFromMain() (binaryPath string, err error) {
 	}
 
 	if latestRelease == nil {
-		return "", fmt.Errorf("releases manifest doesn't contain latest release %s", releases.Spec.LatestVersion)
+		return "", "", fmt.Errorf("releases manifest doesn't contain latest release %s", releases.Spec.LatestVersion)
 	}
 
 	binaryPath, err = getBinary(latestRelease)
 	if err != nil {
-		return "", fmt.Errorf("failed getting binary for latest release: %s", err)
+		return "", "", fmt.Errorf("failed getting binary for latest release: %s", err)
 	}
 
-	return binaryPath, nil
+	return binaryPath, latestRelease.Version, nil
 }
 
 func GetLatestMinorReleaseBinaryFromVersion(releaseBranchVersion *semver.Version) (binaryPath string, err error) {
@@ -54,17 +54,12 @@ func GetLatestMinorReleaseBinaryFromVersion(releaseBranchVersion *semver.Version
 		Version:           "",
 		BundleManifestUrl: "",
 	}
-	latestPrevMinorReleaseVersion, err := semver.New("0.0.0")
-	if err != nil {
-		return "", err
-	}
+	latestPrevMinorReleaseVersion := newVersion("0.0.0")
 
 	for _, release := range releases.Spec.Releases {
 		fmt.Printf("start loop")
-		releaseVersion, err := semver.New(release.Version)
-		if err != nil {
-			return "", err
-		}
+		releaseVersion := newVersion(release.Version)
+
 		if releaseVersion.LessThan(releaseBranchVersion) && releaseVersion.Minor != releaseBranchVersion.Minor && releaseVersion.GreaterThan(latestPrevMinorReleaseVersion) {
 			fmt.Println("met the condition")
 			targetRelease = &release
@@ -96,10 +91,7 @@ func GetReleaseBinaryFromVersion(version *semver.Version) (binaryPath string, er
 
 	var targetVersion *releasev1alpha1.EksARelease
 	for _, release := range releases.Spec.Releases {
-		releaseVersion, err := semver.New(release.Version)
-		if err != nil {
-			return "", err
-		}
+		releaseVersion := newVersion(release.Version)
 		if releaseVersion == version {
 			targetVersion = &release
 		}
