@@ -54,28 +54,12 @@ func GetLatestMinorReleaseBinaryFromVersion(releaseBranchVersion *semver.Version
 		Version:           "",
 		BundleManifestUrl: "",
 	}
-	latestPrevMinorReleaseVersion := newVersion("0.0.0")
-
-	for _, release := range releases.Spec.Releases {
-		fmt.Printf("start loop")
-		releaseVersion := newVersion(release.Version)
-
-		if releaseVersion.LessThan(releaseBranchVersion) && releaseVersion.Minor != releaseBranchVersion.Minor && releaseVersion.GreaterThan(latestPrevMinorReleaseVersion) {
-			fmt.Println("met the condition")
-			targetRelease = &release
-			fmt.Printf("target in if: %s\n", targetRelease.Version)
-			latestPrevMinorReleaseVersion = releaseVersion
-		}
-	}
-	fmt.Printf("end loop")
-
-	if targetRelease == nil {
-		return "", fmt.Errorf("releases manifest doesn't contain a version of the previous minor release")
-	} else {
-		fmt.Printf("target release in else: %s\n", targetRelease.Version)
+	release, err := getLatestMinorRelease(releases, releaseBranchVersion, targetRelease)
+	if err != nil {
+		return "", err
 	}
 
-	binaryPath, err = getBinary(targetRelease)
+	binaryPath, err = getBinary(release)
 	if err != nil {
 		return "", fmt.Errorf("failed getting binary for latest previous minor release: %s", err)
 	}
@@ -162,4 +146,34 @@ func setCodebuildSourceVersionEnvVar(branchName string) error {
 		return fmt.Errorf("error setting CODEBUILD_SOURCE_VERSION env var: %v", err)
 	}
 	return nil
+}
+
+func getLatestMinorRelease(releases *releasev1alpha1.Release, releaseBranchVersion *semver.Version, targetRelease *releasev1alpha1.EksARelease) (*releasev1alpha1.EksARelease, error) {
+	latestPrevMinorReleaseVersion, err := semver.New("0.0.0")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, release := range releases.Spec.Releases {
+		fmt.Printf("start loop")
+		releaseVersion, err := semver.New(release.Version)
+		if err != nil {
+			return nil, err
+		}
+		if releaseVersion.LessThan(releaseBranchVersion) && releaseVersion.Minor != releaseBranchVersion.Minor && releaseVersion.GreaterThan(latestPrevMinorReleaseVersion) {
+			fmt.Println("met the condition")
+			*targetRelease = release
+			fmt.Printf("target in if: %s\n", targetRelease.Version)
+			latestPrevMinorReleaseVersion = releaseVersion
+		}
+	}
+	fmt.Printf("end loop")
+
+	if targetRelease == nil {
+		return nil, fmt.Errorf("releases manifest doesn't contain a version of the previous minor release")
+	} else {
+		fmt.Printf("target release in else: %s\n", targetRelease.Version)
+	}
+
+	return targetRelease, nil
 }

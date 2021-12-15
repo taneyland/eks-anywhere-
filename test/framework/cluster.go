@@ -121,7 +121,7 @@ func WithLatestMinorReleaseFromMain() ClusterE2ETestOpt {
 	}
 }
 
-func WithLatestMinorReleaseFromVersion(version *semver.Version) ClusterE2ETestOpt {
+func WithLatestMinorReleaseFromVersion(version *semver.Version, branchName string) ClusterE2ETestOpt {
 	return func(e *ClusterE2ETest) {
 		eksaBinaryLocation, err := GetLatestMinorReleaseBinaryFromVersion(version)
 		if err != nil {
@@ -129,6 +129,9 @@ func WithLatestMinorReleaseFromVersion(version *semver.Version) ClusterE2ETestOp
 		}
 		e.eksaBinaryLocation = eksaBinaryLocation
 		if err = setEksctlVersionEnvVar(); err != nil {
+			e.T.Fatal(err)
+		}
+		if err = setCodebuildSourceVersionEnvVar(branchName); err != nil {
 			e.T.Fatal(err)
 		}
 	}
