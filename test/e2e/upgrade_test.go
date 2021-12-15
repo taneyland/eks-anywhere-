@@ -360,7 +360,6 @@ func TestVSphereKubernetes120BottlerocketCreateWithPrevMinorUpgradeWith060Branch
 		releaseBranch06,
 		framework.WithClusterUpgrade(api.WithKubernetesVersion(v1alpha1.Kube121)),
 		provider.WithProviderUpgrade(framework.UpdateBottlerocketTemplate121()),
-		framework.WithLatestMinorReleaseFromVersion(framework.Eksa060(), releaseBranch06),
 	)
 }
 
@@ -372,6 +371,7 @@ func TestDockerKubernetes120CreateWithPrevMinorUpgradeWith060Branch(t *testing.T
 		framework.WithClusterFiller(api.WithKubernetesVersion(v1alpha1.Kube120)),
 		framework.WithClusterFiller(api.WithControlPlaneCount(1)),
 		framework.WithClusterFiller(api.WithWorkerNodeCount(1)),
+		framework.WithLatestMinorReleaseFromVersion(framework.Eksa060(), releaseBranch06),
 	)
 	runInterVersionUpgradeFlowFromReleaseBranch(
 		test,
@@ -379,6 +379,5 @@ func TestDockerKubernetes120CreateWithPrevMinorUpgradeWith060Branch(t *testing.T
 		framework.Eksa060(),
 		releaseBranch06,
 		framework.WithClusterUpgrade(api.WithKubernetesVersion(v1alpha1.Kube121)),
-		framework.WithLatestMinorReleaseFromVersion(framework.Eksa060(), releaseBranch06),
 	)
 }
