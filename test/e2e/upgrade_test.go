@@ -22,8 +22,6 @@ const (
 	vsphereNetwork2UpdateVar   = "/SDDC-Datacenter/network/sddc-cgw-network-2"
 	vsphereNetwork3UpdateVar   = "/SDDC-Datacenter/network/sddc-cgw-network-3"
 	clusterNamespace           = "test-namespace"
-	releaseBranch06            = "release-0.6"
-	releaseBranch05            = "release-0.5"
 )
 
 func runSimpleUpgradeFlow(test *framework.ClusterE2ETest, updateVersion v1alpha1.KubernetesVersion, clusterOpts ...framework.ClusterE2ETestOpt) {
@@ -44,7 +42,7 @@ func runDiffCliVersionUpgradeFlowFromMain(test *framework.ClusterE2ETest, update
 	test.DeleteCluster()
 }
 
-func runInterVersionUpgradeFlowFromReleaseBranch(test *framework.ClusterE2ETest, updateVersion v1alpha1.KubernetesVersion, eksaVersion *semver.Version, branchName string, clusterOpts ...framework.ClusterE2ETestOpt) {
+func runInterVersionUpgradeFlowFromReleaseBranch(test *framework.ClusterE2ETest, updateVersion v1alpha1.KubernetesVersion, eksaVersion *semver.Version, clusterOpts ...framework.ClusterE2ETestOpt) {
 	test.GenerateClusterConfig(framework.ExecuteWithLatestMinorReleaseFromVersion(eksaVersion))
 	test.CreateCluster(framework.ExecuteWithLatestMinorReleaseFromVersion(eksaVersion))
 	test.UpgradeCluster(clusterOpts, framework.ExecuteWithEksaVersion(eksaVersion))
@@ -398,5 +396,22 @@ func TestDockerKubernetes121CreateWithLatestReleaseUpgradeWithMain(t *testing.T)
 	runDiffCliVersionUpgradeFlowFromMain(
 		test,
 		v1alpha1.Kube121,
+	)
+}
+
+func TestDockerKubernetes120CreateWithPrevMinorUpgradeWith060Branch(t *testing.T) {
+	provider := framework.NewDocker(t)
+	test := framework.NewClusterE2ETest(
+		t,
+		provider,
+		framework.WithClusterFiller(api.WithKubernetesVersion(v1alpha1.Kube120)),
+		framework.WithClusterFiller(api.WithControlPlaneCount(1)),
+		framework.WithClusterFiller(api.WithWorkerNodeCount(1)),
+	)
+	runInterVersionUpgradeFlowFromReleaseBranch(
+		test,
+		v1alpha1.Kube121,
+		framework.Eksa060(),
+		framework.WithClusterUpgrade(api.WithKubernetesVersion(v1alpha1.Kube121)),
 	)
 }

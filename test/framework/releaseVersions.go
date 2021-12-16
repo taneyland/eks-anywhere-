@@ -146,7 +146,7 @@ func getLatestMinorRelease(releases *releasev1alpha1.Release, releaseBranchVersi
 	for _, release := range releases.Spec.Releases {
 		releaseVersion := newVersion(release.Version)
 		if releaseVersion.LessThan(releaseBranchVersion) && releaseVersion.Minor != releaseBranchVersion.Minor && releaseVersion.GreaterThan(latestPrevMinorReleaseVersion) {
-			targetRelease = &release
+			*targetRelease = release
 			latestPrevMinorReleaseVersion = releaseVersion
 		}
 	}
