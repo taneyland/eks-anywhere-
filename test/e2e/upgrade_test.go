@@ -35,7 +35,7 @@ func runSimpleUpgradeFlow(test *framework.ClusterE2ETest, updateVersion v1alpha1
 	test.DeleteCluster()
 }
 
-func runInterVersionUpgradeFlowFromMain(test *framework.ClusterE2ETest, updateVersion v1alpha1.KubernetesVersion, clusterOpts ...framework.ClusterE2ETestOpt) {
+func runDiffCliVersionUpgradeFlowFromMain(test *framework.ClusterE2ETest, updateVersion v1alpha1.KubernetesVersion, clusterOpts ...framework.ClusterE2ETestOpt) {
 	test.GenerateClusterConfig(framework.ExecuteWithLatestMinorReleaseFromMain())
 	test.CreateCluster(framework.ExecuteWithLatestMinorReleaseFromMain())
 	test.UpgradeCluster(clusterOpts)
@@ -45,9 +45,9 @@ func runInterVersionUpgradeFlowFromMain(test *framework.ClusterE2ETest, updateVe
 }
 
 func runInterVersionUpgradeFlowFromReleaseBranch(test *framework.ClusterE2ETest, updateVersion v1alpha1.KubernetesVersion, eksaVersion *semver.Version, branchName string, clusterOpts ...framework.ClusterE2ETestOpt) {
-	test.GenerateClusterConfig()
-	test.CreateCluster()
-	test.UpgradeCluster(clusterOpts, framework.ExecuteWithEksaVersion(eksaVersion, branchName))
+	test.GenerateClusterConfig(framework.ExecuteWithLatestMinorReleaseFromVersion(eksaVersion))
+	test.CreateCluster(framework.ExecuteWithLatestMinorReleaseFromVersion(eksaVersion))
+	test.UpgradeCluster(clusterOpts, framework.ExecuteWithEksaVersion(eksaVersion))
 	test.ValidateCluster(updateVersion)
 	test.StopIfFailed()
 	test.DeleteCluster()
@@ -335,17 +335,29 @@ func TestVSphereKubernetes120BottlerocketCreateWithLatestReleaseUpgradeWithMain(
 		framework.WithClusterFiller(api.WithControlPlaneCount(1)),
 		framework.WithClusterFiller(api.WithWorkerNodeCount(1)),
 	)
-	runInterVersionUpgradeFlowFromMain(
+	runDiffCliVersionUpgradeFlowFromMain(
 		test,
-		v1alpha1.Kube121,
-
-		framework.WithClusterUpgrade(api.WithKubernetesVersion(v1alpha1.Kube121)),
-		provider.WithProviderUpgrade(framework.UpdateBottlerocketTemplate121()),
+		v1alpha1.Kube120,
 	)
 }
 
-func TestVSphereKubernetes120BottlerocketCreateWithPrevMinorUpgradeWith060Branch(t *testing.T) {
-	provider := framework.NewVSphere(t, framework.WithBottleRocket120())
+func TestVSphereKubernetes121BottlerocketCreateWithLatestReleaseUpgradeWithMain(t *testing.T) {
+	provider := framework.NewVSphere(t, framework.WithBottleRocket121())
+	test := framework.NewClusterE2ETest(
+		t,
+		provider,
+		framework.WithClusterFiller(api.WithKubernetesVersion(v1alpha1.Kube121)),
+		framework.WithClusterFiller(api.WithControlPlaneCount(1)),
+		framework.WithClusterFiller(api.WithWorkerNodeCount(1)),
+	)
+	runDiffCliVersionUpgradeFlowFromMain(
+		test,
+		v1alpha1.Kube121,
+	)
+}
+
+func TestVSphereKubernetes120UbuntuCreateWithLatestReleaseUpgradeWithMain(t *testing.T) {
+	provider := framework.NewVSphere(t, framework.WithUbuntu120())
 	test := framework.NewClusterE2ETest(
 		t,
 		provider,
@@ -353,31 +365,38 @@ func TestVSphereKubernetes120BottlerocketCreateWithPrevMinorUpgradeWith060Branch
 		framework.WithClusterFiller(api.WithControlPlaneCount(1)),
 		framework.WithClusterFiller(api.WithWorkerNodeCount(1)),
 	)
-	runInterVersionUpgradeFlowFromReleaseBranch(
+	runDiffCliVersionUpgradeFlowFromMain(
 		test,
-		v1alpha1.Kube121,
-		framework.Eksa060(),
-		releaseBranch06,
-		framework.WithClusterUpgrade(api.WithKubernetesVersion(v1alpha1.Kube121)),
-		provider.WithProviderUpgrade(framework.UpdateBottlerocketTemplate121()),
+		v1alpha1.Kube120,
 	)
 }
 
-func TestDockerKubernetes120CreateWithPrevMinorUpgradeWith060Branch(t *testing.T) {
+func TestVSphereKubernetes121UbuntuCreateWithLatestReleaseUpgradeWithMain(t *testing.T) {
+	provider := framework.NewVSphere(t, framework.WithUbuntu121())
+	test := framework.NewClusterE2ETest(
+		t,
+		provider,
+		framework.WithClusterFiller(api.WithKubernetesVersion(v1alpha1.Kube121)),
+		framework.WithClusterFiller(api.WithControlPlaneCount(1)),
+		framework.WithClusterFiller(api.WithWorkerNodeCount(1)),
+	)
+	runDiffCliVersionUpgradeFlowFromMain(
+		test,
+		v1alpha1.Kube121,
+	)
+}
+
+func TestDockerKubernetes121CreateWithLatestReleaseUpgradeWithMain(t *testing.T) {
 	provider := framework.NewDocker(t)
 	test := framework.NewClusterE2ETest(
 		t,
 		provider,
-		framework.WithClusterFiller(api.WithKubernetesVersion(v1alpha1.Kube120)),
+		framework.WithClusterFiller(api.WithKubernetesVersion(v1alpha1.Kube121)),
 		framework.WithClusterFiller(api.WithControlPlaneCount(1)),
 		framework.WithClusterFiller(api.WithWorkerNodeCount(1)),
-		framework.WithLatestMinorReleaseFromVersion(framework.Eksa060(), releaseBranch06),
 	)
-	runInterVersionUpgradeFlowFromReleaseBranch(
+	runDiffCliVersionUpgradeFlowFromMain(
 		test,
 		v1alpha1.Kube121,
-		framework.Eksa060(),
-		releaseBranch06,
-		framework.WithClusterUpgrade(api.WithKubernetesVersion(v1alpha1.Kube121)),
 	)
 }

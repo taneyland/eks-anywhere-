@@ -2,11 +2,6 @@ package framework
 
 import "github.com/aws/eks-anywhere/pkg/semver"
 
-const (
-	releaseBranch06 = "release-0.6"
-	releaseBranch05 = "release-0.5"
-)
-
 type CommandOpt func(*string, *[]string) (err error)
 
 func appendOpt(new ...string) CommandOpt {
@@ -20,22 +15,28 @@ func withKubeconfig(kubeconfigFile string) CommandOpt {
 	return appendOpt("--kubeconfig", kubeconfigFile)
 }
 
-func ExecuteWithEksaVersion(version *semver.Version, branchName string) CommandOpt {
+func ExecuteWithEksaVersion(version *semver.Version) CommandOpt {
 	return func(binaryPath *string, args *[]string) (err error) {
 		b, err := GetReleaseBinaryFromVersion(version)
+		if err != nil {
+			return err
+		}
 		*binaryPath = b
-		if err := setCodebuildSourceVersionEnvVar(branchName); err != nil {
+		if err = setEksctlVersionEnvVar(); err != nil {
 			return err
 		}
 		return err
 	}
 }
 
-func ExecuteWithLatestMinorReleaseFromVersion(version *semver.Version, branchName string) CommandOpt {
+func ExecuteWithLatestMinorReleaseFromVersion(version *semver.Version) CommandOpt {
 	return func(binaryPath *string, args *[]string) (err error) {
 		b, err := GetLatestMinorReleaseBinaryFromVersion(version)
+		if err != nil {
+			return err
+		}
 		*binaryPath = b
-		if err := setCodebuildSourceVersionEnvVar(branchName); err != nil {
+		if err = setEksctlVersionEnvVar(); err != nil {
 			return err
 		}
 		return err
@@ -44,18 +45,12 @@ func ExecuteWithLatestMinorReleaseFromVersion(version *semver.Version, branchNam
 
 func ExecuteWithLatestMinorReleaseFromMain() CommandOpt {
 	return func(binaryPath *string, args *[]string) (err error) {
-		b, v, err := GetLatestMinorReleaseBinaryFromMain()
+		b, err := GetLatestMinorReleaseBinaryFromMain()
+		if err != nil {
+			return err
+		}
 		*binaryPath = b
-
-		version := newVersion(v)
-		var branchName string
-		if version.Minor == 5 {
-			branchName = releaseBranch05
-		}
-		if version.Minor == 6 {
-			branchName = releaseBranch06
-		}
-		if err := setCodebuildSourceVersionEnvVar(branchName); err != nil {
+		if err = setEksctlVersionEnvVar(); err != nil {
 			return err
 		}
 		return err
