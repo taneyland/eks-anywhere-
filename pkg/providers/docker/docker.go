@@ -169,7 +169,7 @@ func (d *DockerTemplateBuilder) GenerateCAPISpecWorkers(clusterSpec *cluster.Spe
 func buildTemplateMapCP(clusterSpec *cluster.Spec) map[string]interface{} {
 	bundle := clusterSpec.VersionsBundle
 	etcdExtraArgs := clusterapi.SecureEtcdTlsCipherSuitesExtraArgs()
-	sharedExtraArgs := clusterapi.SecureTlsCipherSuitesExtraArgs()
+	sharedExtraArgs := clusterapi.SecureTlsCipherSuitesExtraArgs().Append(clusterapi.ResolvConfExtraArgs())
 	apiServerExtraArgs := clusterapi.OIDCToExtraArgs(clusterSpec.OIDCConfig).
 		Append(clusterapi.AwsIamAuthExtraArgs(clusterSpec.AWSIamConfig)).
 		Append(clusterapi.PodIAMAuthExtraArgs(clusterSpec.Spec.PodIAMConfig)).
