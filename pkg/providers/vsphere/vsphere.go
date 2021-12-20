@@ -659,7 +659,7 @@ func buildTemplateMapCP(clusterSpec *cluster.Spec, datacenterSpec v1alpha1.VSphe
 	bundle := clusterSpec.VersionsBundle
 	format := "cloud-config"
 	etcdExtraArgs := clusterapi.SecureEtcdTlsCipherSuitesExtraArgs()
-	sharedExtraArgs := clusterapi.SecureTlsCipherSuitesExtraArgs()
+	sharedExtraArgs := clusterapi.SecureTlsCipherSuitesExtraArgs().Append(clusterapi.ResolvConfExtraArgs())
 	apiServerExtraArgs := clusterapi.OIDCToExtraArgs(clusterSpec.OIDCConfig).
 		Append(clusterapi.AwsIamAuthExtraArgs(clusterSpec.AWSIamConfig)).
 		Append(clusterapi.PodIAMAuthExtraArgs(clusterSpec.Spec.PodIAMConfig)).
