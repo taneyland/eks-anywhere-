@@ -80,7 +80,6 @@ spec:
           audit-log-maxbackup: "10"
           audit-log-maxsize: "512"
           profiling: "false"
-          resolv-conf: /etc/resolv.conf
           service-account-issuer: https://test
           tls-cipher-suites: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
         extraVolumes:
@@ -98,12 +97,10 @@ spec:
         extraArgs:
           enable-hostpath-provisioner: "true"
           profiling: "false"
-          resolv-conf: /etc/resolv.conf
           tls-cipher-suites: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
       scheduler:
         extraArgs:
           profiling: "false"
-          resolv-conf: /etc/resolv.conf
           tls-cipher-suites: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
     files:
     - content: |

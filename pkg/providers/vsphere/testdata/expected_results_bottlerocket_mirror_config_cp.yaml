@@ -122,7 +122,6 @@ spec:
           audit-log-maxbackup: "10"
           audit-log-maxsize: "512"
           profiling: "false"
-          resolv-conf: /etc/resolv.conf
           tls-cipher-suites: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
         extraVolumes:
         - hostPath: /var/lib/kubeadm/audit-policy.yaml
@@ -139,7 +138,6 @@ spec:
         extraArgs:
           cloud-provider: external
           profiling: "false"
-          resolv-conf: /etc/resolv.conf
           tls-cipher-suites: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
         extraVolumes:
         - hostPath: /var/lib/kubeadm/controller-manager.conf
@@ -150,7 +148,6 @@ spec:
       scheduler:
         extraArgs:
           profiling: "false"
-          resolv-conf: /etc/resolv.conf
           tls-cipher-suites: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
         extraVolumes:
         - hostPath: /var/lib/kubeadm/scheduler.conf
