@@ -34,6 +34,9 @@ spec:
           criSocket: /var/run/containerd/containerd.sock
           kubeletExtraArgs:
             cloud-provider: external
+            node-labels:
+              hello: world
+              foo: bar
 {{- if .cgroupDriverSystemd}}
             cgroup-driver: systemd
 {{- end }}
