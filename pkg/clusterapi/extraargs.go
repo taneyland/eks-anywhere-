@@ -9,7 +9,7 @@ import (
 	"github.com/aws/eks-anywhere/pkg/templater"
 )
 
-type ExtraArgs map[string]string
+type ExtraArgs map[string]interface{}
 
 func OIDCToExtraArgs(oidc *v1alpha1.OIDCConfig) ExtraArgs {
 	args := ExtraArgs{}
@@ -60,6 +60,22 @@ func SecureEtcdTlsCipherSuitesExtraArgs() ExtraArgs {
 	args := ExtraArgs{}
 	args.AddIfNotEmpty("cipher-suites", crypto.SecureCipherSuitesString())
 	return args
+}
+
+func NodeLabelsExtraArgs(wnc v1alpha1.WorkerNodeGroupConfiguration) ExtraArgs {
+	if wnc.Labels == nil {
+		return nil
+	}
+	args := ExtraArgs{}
+	args.AddIfNotEmptyStringMap("node-labels", wnc.Labels)
+	return args
+}
+
+func (e ExtraArgs) AddIfNotEmptyStringMap(k string, v map[string]string) {
+	if v != nil {
+		logger.V(5).Info("Adding extraArgs", k, v)
+		e[k] = v
+	}
 }
 
 func (e ExtraArgs) AddIfNotEmpty(k, v string) {

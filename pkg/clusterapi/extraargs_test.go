@@ -94,7 +94,7 @@ func TestExtraArgsAddIfNotEmpty(t *testing.T) {
 		k         string
 		v         string
 		wantAdded bool
-		wantV     string
+		wantV     interface{}
 	}{
 		{
 			testName:  "add string",
@@ -110,7 +110,7 @@ func TestExtraArgsAddIfNotEmpty(t *testing.T) {
 			k:         "key",
 			v:         "",
 			wantAdded: false,
-			wantV:     "",
+			wantV:     nil,
 		},
 		{
 			testName: "add present string",
