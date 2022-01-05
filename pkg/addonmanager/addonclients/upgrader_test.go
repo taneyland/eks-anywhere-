@@ -36,6 +36,11 @@ func newUpgraderTest(t *testing.T) *upgraderTest {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "management-cluster",
 			},
+			Spec: v1alpha1.ClusterSpec{
+				GitOpsRef: &v1alpha1.Ref{
+					Name: "testGitOpsRef",
+				},
+			},
 		}
 	})
 
@@ -63,6 +68,10 @@ func newUpgraderTest(t *testing.T) *upgraderTest {
 
 func TestFluxUpgradeNoSelfManaged(t *testing.T) {
 	tt := newUpgraderTest(t)
+
+	fmt.Println(tt.currentSpec)
+	fmt.Println(tt.newSpec)
+
 	f, _, _ := newAddonClient(t)
 	tt.newSpec.Cluster.SetManagedBy("management-cluster")
 
@@ -81,11 +90,6 @@ func TestFluxUpgradeSuccess(t *testing.T) {
 	tt := newUpgraderTest(t)
 	tt.newSpec.VersionsBundle.Flux.Version = "v0.2.0"
 
-	tt.newSpec.GitOpsConfig = &v1alpha1.GitOpsConfig{
-		Spec: v1alpha1.GitOpsConfigSpec{
-			Flux: tt.fluxConfig,
-		},
-	}
 	f, m, g := newAddonClient(t)
 
 	if err := setupTestFiles(t, g); err != nil {
@@ -120,11 +124,6 @@ func TestFluxUpgradeError(t *testing.T) {
 	tt := newUpgraderTest(t)
 	tt.newSpec.VersionsBundle.Flux.Version = "v0.2.0"
 
-	tt.newSpec.GitOpsConfig = &v1alpha1.GitOpsConfig{
-		Spec: v1alpha1.GitOpsConfigSpec{
-			Flux: tt.fluxConfig,
-		},
-	}
 	f, m, g := newAddonClient(t)
 
 	if err := setupTestFiles(t, g); err != nil {
@@ -141,6 +140,8 @@ func TestFluxUpgradeError(t *testing.T) {
 	m.flux.EXPECT().DeleteFluxSystemSecret(tt.ctx, tt.cluster, tt.newSpec.GitOpsConfig.Spec.Flux.Github.FluxSystemNamespace)
 	m.flux.EXPECT().BootstrapToolkitsComponents(tt.ctx, tt.cluster, tt.newSpec.GitOpsConfig).Return(errors.New("error from client"))
 
+	fmt.Println(tt.currentSpec.GitOpsConfig)
+
 	_, err := f.Upgrade(tt.ctx, tt.cluster, tt.currentSpec, tt.newSpec)
 	tt.Expect(err).NotTo(BeNil())
 }
@@ -148,6 +149,7 @@ func TestFluxUpgradeError(t *testing.T) {
 func TestFluxUpgradeNoGitOpsConfig(t *testing.T) {
 	tt := newUpgraderTest(t)
 	f, _, _ := newAddonClient(t)
+	tt.currentSpec.GitOpsConfig = nil
 	tt.newSpec.GitOpsConfig = nil
 
 	tt.Expect(f.Upgrade(tt.ctx, tt.cluster, tt.currentSpec, tt.newSpec)).To(BeNil())
