@@ -87,22 +87,32 @@ func (v *Validator) validateCluster(ctx context.Context, vsphereClusterSpec *spe
 	if len(controlPlaneMachineConfig.Spec.ResourcePool) <= 0 {
 		return errors.New("VSphereMachineConfig VM resourcePool for control plane is not set or is empty")
 	}
-	if vsphereClusterSpec.Cluster.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef == nil {
-		return errors.New("must specify machineGroupRef for worker nodes")
-	}
 
-	workerNodeGroupMachineConfig := vsphereClusterSpec.firstWorkerMachineConfig()
-	if workerNodeGroupMachineConfig == nil {
-		return fmt.Errorf("cannot find VSphereMachineConfig %v for worker nodes", vsphereClusterSpec.Cluster.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef.Name)
-	}
-	if len(workerNodeGroupMachineConfig.Spec.Datastore) <= 0 {
-		return errors.New("VSphereMachineConfig datastore for worker nodes is not set or is empty")
-	}
-	if len(workerNodeGroupMachineConfig.Spec.Folder) <= 0 {
-		logger.Info("VSphereMachineConfig folder for worker nodes is not set or is empty. Will default to root vSphere folder.")
-	}
-	if len(workerNodeGroupMachineConfig.Spec.ResourcePool) <= 0 {
-		return errors.New("VSphereMachineConfig VM resourcePool for worker nodes is not set or is empty")
+	var workerNodeGroupMachineConfigs []*anywherev1.VSphereMachineConfig
+	for _, workerNodeGroupConfiguration := range vsphereClusterSpec.Cluster.Spec.WorkerNodeGroupConfigurations {
+		if workerNodeGroupConfiguration.MachineGroupRef == nil {
+			return errors.New("must specify machineGroupRef for worker nodes")
+		}
+		workerNodeGroupMachineConfig := vsphereClusterSpec.workerMachineConfig(workerNodeGroupConfiguration)
+		workerNodeGroupMachineConfigs = append(workerNodeGroupMachineConfigs, workerNodeGroupMachineConfig)
+		if workerNodeGroupMachineConfig == nil {
+			return fmt.Errorf("cannot find VSphereMachineConfig %v for worker nodes", workerNodeGroupConfiguration.MachineGroupRef.Name)
+		}
+		if len(workerNodeGroupMachineConfig.Spec.Datastore) <= 0 {
+			return fmt.Errorf("VSphereMachineConfig datastore for worker node %s is not set or is empty", workerNodeGroupConfiguration.MachineGroupRef.Name)
+		}
+		if len(workerNodeGroupMachineConfig.Spec.Folder) <= 0 {
+			logger.Info("VSphereMachineConfig folder for worker nodes is not set or is empty. Will default to root vSphere folder.")
+		}
+		if len(workerNodeGroupMachineConfig.Spec.ResourcePool) <= 0 {
+			return fmt.Errorf("VSphereMachineConfig VM resourcePool for worker node %s is not set or is empty", workerNodeGroupConfiguration.MachineGroupRef.Name)
+		}
+		if workerNodeGroupMachineConfig.Spec.OSFamily != anywherev1.Bottlerocket && workerNodeGroupMachineConfig.Spec.OSFamily != anywherev1.Ubuntu {
+			return fmt.Errorf("worker node osFamily: %s is not supported, please use one of the following: %s, %s", workerNodeGroupMachineConfig.Spec.OSFamily, anywherev1.Bottlerocket, anywherev1.Ubuntu)
+		}
+		if controlPlaneMachineConfig.Spec.OSFamily != workerNodeGroupMachineConfig.Spec.OSFamily {
+			return errors.New("control plane and worker nodes must have the same osFamily specified")
+		}
 	}
 
 	if vsphereClusterSpec.Cluster.Spec.ExternalEtcdConfiguration != nil {
@@ -140,16 +150,8 @@ func (v *Validator) validateCluster(ctx context.Context, vsphereClusterSpec *spe
 		return fmt.Errorf("control plane osFamily: %s is not supported, please use one of the following: %s, %s", controlPlaneMachineConfig.Spec.OSFamily, anywherev1.Bottlerocket, anywherev1.Ubuntu)
 	}
 
-	if workerNodeGroupMachineConfig.Spec.OSFamily != anywherev1.Bottlerocket && workerNodeGroupMachineConfig.Spec.OSFamily != anywherev1.Ubuntu {
-		return fmt.Errorf("worker node osFamily: %s is not supported, please use one of the following: %s, %s", workerNodeGroupMachineConfig.Spec.OSFamily, anywherev1.Bottlerocket, anywherev1.Ubuntu)
-	}
-
 	if etcdMachineConfig != nil && etcdMachineConfig.Spec.OSFamily != anywherev1.Bottlerocket && etcdMachineConfig.Spec.OSFamily != anywherev1.Ubuntu {
 		return fmt.Errorf("etcd node osFamily: %s is not supported, please use one of the following: %s, %s", etcdMachineConfig.Spec.OSFamily, anywherev1.Bottlerocket, anywherev1.Ubuntu)
-	}
-
-	if controlPlaneMachineConfig.Spec.OSFamily != workerNodeGroupMachineConfig.Spec.OSFamily {
-		return errors.New("control plane and worker nodes must have the same osFamily specified")
 	}
 
 	if etcdMachineConfig != nil && controlPlaneMachineConfig.Spec.OSFamily != etcdMachineConfig.Spec.OSFamily {
@@ -157,8 +159,10 @@ func (v *Validator) validateCluster(ctx context.Context, vsphereClusterSpec *spe
 	}
 
 	if err := v.validateSSHUsername(controlPlaneMachineConfig); err == nil {
-		if err = v.validateSSHUsername(workerNodeGroupMachineConfig); err != nil {
-			return fmt.Errorf("error validating SSHUsername for worker node VSphereMachineConfig %v: %v", workerNodeGroupMachineConfig.Name, err)
+		for _, wnConfig := range workerNodeGroupMachineConfigs {
+			if err = v.validateSSHUsername(wnConfig); err != nil {
+				return fmt.Errorf("error validating SSHUsername for worker node VSphereMachineConfig %v: %v", wnConfig.Name, err)
+			}
 		}
 		if etcdMachineConfig != nil {
 			if err = v.validateSSHUsername(etcdMachineConfig); err != nil {
@@ -184,8 +188,10 @@ func (v *Validator) validateCluster(ctx context.Context, vsphereClusterSpec *spe
 		return err
 	}
 
-	if controlPlaneMachineConfig.Spec.Template != workerNodeGroupMachineConfig.Spec.Template {
-		return errors.New("control plane and worker nodes must have the same template specified")
+	for _, wnConfig := range workerNodeGroupMachineConfigs {
+		if controlPlaneMachineConfig.Spec.Template != wnConfig.Spec.Template {
+			return errors.New("control plane and worker nodes must have the same template specified")
+		}
 	}
 	logger.MarkPass("Control plane and Workload templates validated")
 
@@ -195,7 +201,7 @@ func (v *Validator) validateCluster(ctx context.Context, vsphereClusterSpec *spe
 		}
 	}
 
-	return v.validateDatastoreUsage(ctx, vsphereClusterSpec.Spec, controlPlaneMachineConfig, workerNodeGroupMachineConfig, etcdMachineConfig)
+	return v.validateDatastoreUsage(ctx, vsphereClusterSpec.Spec, controlPlaneMachineConfig, workerNodeGroupMachineConfigs, etcdMachineConfig)
 }
 
 func (v *Validator) validateControlPlaneIp(ip string) error {
@@ -263,21 +269,37 @@ type datastoreUsage struct {
 
 // TODO: cleanup this method signature
 // TODO: dry out implementation
-func (v *Validator) validateDatastoreUsage(ctx context.Context, clusterSpec *cluster.Spec, controlPlaneMachineConfig *anywherev1.VSphereMachineConfig, workerNodeGroupMachineConfig *anywherev1.VSphereMachineConfig, etcdMachineConfig *anywherev1.VSphereMachineConfig) error {
+func (v *Validator) validateDatastoreUsage(ctx context.Context, clusterSpec *cluster.Spec, controlPlaneMachineConfig *anywherev1.VSphereMachineConfig, workerNodeGroupMachineConfigs []*anywherev1.VSphereMachineConfig, etcdMachineConfig *anywherev1.VSphereMachineConfig) error {
 	usage := make(map[string]*datastoreUsage)
 	controlPlaneAvailableSpace, err := v.govc.GetWorkloadAvailableSpace(ctx, controlPlaneMachineConfig.Spec.Datastore) // TODO: remove dependency on machineConfig
 	if err != nil {
 		return fmt.Errorf("error getting datastore details: %v", err)
 	}
-	workerAvailableSpace, err := v.govc.GetWorkloadAvailableSpace(ctx, workerNodeGroupMachineConfig.Spec.Datastore)
-	if err != nil {
-		return fmt.Errorf("error getting datastore details: %v", err)
-	}
-
 	controlPlaneNeedGiB := controlPlaneMachineConfig.Spec.DiskGiB * clusterSpec.Spec.ControlPlaneConfiguration.Count
 	usage[controlPlaneMachineConfig.Spec.Datastore] = &datastoreUsage{
 		availableSpace: controlPlaneAvailableSpace,
 		needGiBSpace:   controlPlaneNeedGiB,
+	}
+
+	for _, wnConfig := range workerNodeGroupMachineConfigs {
+		workerAvailableSpace, err := v.govc.GetWorkloadAvailableSpace(ctx, wnConfig.Spec.Datastore)
+		if err != nil {
+			return fmt.Errorf("error getting datastore details: %v", err)
+		}
+		workerNeedGiB := wnConfig.Spec.DiskGiB * workerNodeGroupConfiguration.Count
+		_, ok := usage[wnConfig.Spec.Datastore]
+		if ok {
+			usage[wnConfig.Spec.Datastore].needGiBSpace += workerNeedGiB
+		} else {
+			usage[wnConfig.Spec.Datastore] = &datastoreUsage{
+				availableSpace: workerAvailableSpace,
+				needGiBSpace:   workerNeedGiB,
+			}
+		}
+	}
+
+	for _, workerNodeGroupConfiguration := range clusterSpec.Spec.WorkerNodeGroupConfigurations {
+
 	}
 	workerNeedGiB := workerNodeGroupMachineConfig.Spec.DiskGiB * clusterSpec.Spec.WorkerNodeGroupConfigurations[0].Count
 	_, ok := usage[workerNodeGroupMachineConfig.Spec.Datastore]

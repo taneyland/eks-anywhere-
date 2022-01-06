@@ -175,8 +175,12 @@ func NewProviderCustomNet(datacenterConfig *v1alpha1.VSphereDatacenterConfig, ma
 	if clusterConfig.Spec.ControlPlaneConfiguration.MachineGroupRef != nil && machineConfigs[clusterConfig.Spec.ControlPlaneConfiguration.MachineGroupRef.Name] != nil {
 		controlPlaneMachineSpec = &machineConfigs[clusterConfig.Spec.ControlPlaneConfiguration.MachineGroupRef.Name].Spec
 	}
-	if len(clusterConfig.Spec.WorkerNodeGroupConfigurations) > 0 && clusterConfig.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef != nil && machineConfigs[clusterConfig.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef.Name] != nil {
-		workerNodeGroupMachineSpec = &machineConfigs[clusterConfig.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef.Name].Spec
+	var workerNodeGroupMachineSpecs []*v1alpha1.VSphereMachineConfigSpec
+	for _, wnConfig := range clusterConfig.Spec.WorkerNodeGroupConfigurations {
+		if wnConfig.MachineGroupRef != nil && machineConfigs[wnConfig.MachineGroupRef.Name] != nil {
+			workerNodeGroupMachineSpec = &machineConfigs[wnConfig.MachineGroupRef.Name].Spec
+			workerNodeGroupMachineSpecs = append(workerNodeGroupMachineSpecs, workerNodeGroupMachineSpec)
+		}
 	}
 	if clusterConfig.Spec.ExternalEtcdConfiguration != nil {
 		if clusterConfig.Spec.ExternalEtcdConfiguration.MachineGroupRef != nil && machineConfigs[clusterConfig.Spec.ExternalEtcdConfiguration.MachineGroupRef.Name] != nil {
@@ -192,11 +196,11 @@ func NewProviderCustomNet(datacenterConfig *v1alpha1.VSphereDatacenterConfig, ma
 		providerKubectlClient: providerKubectlClient,
 		writer:                writer,
 		templateBuilder: &VsphereTemplateBuilder{
-			datacenterSpec:             &datacenterConfig.Spec,
-			controlPlaneMachineSpec:    controlPlaneMachineSpec,
-			workerNodeGroupMachineSpec: workerNodeGroupMachineSpec,
-			etcdMachineSpec:            etcdMachineSpec,
-			now:                        now,
+			datacenterSpec:              &datacenterConfig.Spec,
+			controlPlaneMachineSpec:     controlPlaneMachineSpec,
+			workerNodeGroupMachineSpecs: workerNodeGroupMachineSpecs,
+			etcdMachineSpec:             etcdMachineSpec,
+			now:                         now,
 		},
 		skipIpCheck:        skipIpCheck,
 		resourceSetManager: resourceSetManager,
@@ -591,22 +595,22 @@ func AnyImmutableFieldChanged(oldVdc, newVdc *v1alpha1.VSphereDatacenterConfig, 
 	return false
 }
 
-func NewVsphereTemplateBuilder(datacenterSpec *v1alpha1.VSphereDatacenterConfigSpec, controlPlaneMachineSpec, workerNodeGroupMachineSpec, etcdMachineSpec *v1alpha1.VSphereMachineConfigSpec, now types.NowFunc) providers.TemplateBuilder {
+func NewVsphereTemplateBuilder(datacenterSpec *v1alpha1.VSphereDatacenterConfigSpec, controlPlaneMachineSpec, etcdMachineSpec *v1alpha1.VSphereMachineConfigSpec, workerNodeGroupMachineSpecs []*v1alpha1.VSphereMachineConfigSpec, now types.NowFunc) providers.TemplateBuilder {
 	return &VsphereTemplateBuilder{
-		datacenterSpec:             datacenterSpec,
-		controlPlaneMachineSpec:    controlPlaneMachineSpec,
-		workerNodeGroupMachineSpec: workerNodeGroupMachineSpec,
-		etcdMachineSpec:            etcdMachineSpec,
-		now:                        now,
+		datacenterSpec:              datacenterSpec,
+		controlPlaneMachineSpec:     controlPlaneMachineSpec,
+		workerNodeGroupMachineSpecs: workerNodeGroupMachineSpecs,
+		etcdMachineSpec:             etcdMachineSpec,
+		now:                         now,
 	}
 }
 
 type VsphereTemplateBuilder struct {
-	datacenterSpec             *v1alpha1.VSphereDatacenterConfigSpec
-	controlPlaneMachineSpec    *v1alpha1.VSphereMachineConfigSpec
-	workerNodeGroupMachineSpec *v1alpha1.VSphereMachineConfigSpec
-	etcdMachineSpec            *v1alpha1.VSphereMachineConfigSpec
-	now                        types.NowFunc
+	datacenterSpec              *v1alpha1.VSphereDatacenterConfigSpec
+	controlPlaneMachineSpec     *v1alpha1.VSphereMachineConfigSpec
+	workerNodeGroupMachineSpecs []*v1alpha1.VSphereMachineConfigSpec
+	etcdMachineSpec             *v1alpha1.VSphereMachineConfigSpec
+	now                         types.NowFunc
 }
 
 func (vs *VsphereTemplateBuilder) WorkerMachineTemplateName(clusterName string) string {
@@ -644,18 +648,22 @@ func (vs *VsphereTemplateBuilder) GenerateCAPISpecControlPlane(clusterSpec *clus
 }
 
 func (vs *VsphereTemplateBuilder) GenerateCAPISpecWorkers(clusterSpec *cluster.Spec, buildOptions ...providers.BuildMapOption) (content []byte, err error) {
-	values := buildTemplateMapMD(clusterSpec, *vs.datacenterSpec, *vs.workerNodeGroupMachineSpec)
+	var workerSpecs [][]byte
+	for _, workerNodeGroupSpec := range vs.workerNodeGroupMachineSpecs {
+		values := buildTemplateMapMD(clusterSpec, *vs.datacenterSpec, *workerNodeGroupSpec)
 
-	for _, buildOption := range buildOptions {
-		buildOption(values)
+		for _, buildOption := range buildOptions {
+			buildOption(values)
+		}
+
+		bytes, err := templater.Execute(defaultClusterConfigMD, values)
+		if err != nil {
+			return nil, err
+		}
+		workerSpecs = append(workerSpecs, bytes)
 	}
 
-	bytes, err := templater.Execute(defaultClusterConfigMD, values)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes, nil
+	return templater.AppendYamlResources(workerSpecs...), nil
 }
 
 func buildTemplateMapCP(clusterSpec *cluster.Spec, datacenterSpec v1alpha1.VSphereDatacenterConfigSpec, controlPlaneMachineSpec, etcdMachineSpec v1alpha1.VSphereMachineConfigSpec) map[string]interface{} {

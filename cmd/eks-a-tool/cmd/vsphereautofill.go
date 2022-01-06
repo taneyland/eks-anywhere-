@@ -69,8 +69,7 @@ func autofill(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("unable to get machine config from file: %v", err)
 	}
-	controlPlaneMachineConfig := machineConfig[clusterConfig.Spec.ControlPlaneConfiguration.MachineGroupRef.Name]
-	workerMachineConfig := machineConfig[clusterConfig.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef.Name]
+
 	var updatedFields []string
 	updateField := func(envName string, field *string) {
 		if value, set := os.LookupEnv(envName); set && len(value) > 0 {
@@ -95,8 +94,8 @@ func autofill(ctx context.Context) error {
 	updateField("THUMBPRINT", &datacenterConfig.Spec.Thumbprint)
 
 	updateFieldInt("CONTROL_PLANE_COUNT", &clusterConfig.Spec.ControlPlaneConfiguration.Count)
-	updateFieldInt("WORKER_NODE_COUNT", &clusterConfig.Spec.WorkerNodeGroupConfigurations[0].Count)
 
+	controlPlaneMachineConfig := machineConfig[clusterConfig.Spec.ControlPlaneConfiguration.MachineGroupRef.Name]
 	updateField("SSH_AUTHORIZED_KEY", &controlPlaneMachineConfig.Spec.Users[0].SshAuthorizedKeys[0])
 	updateField("SSH_USERNAME", &controlPlaneMachineConfig.Spec.Users[0].Name)
 	updateField("TEMPLATE", &controlPlaneMachineConfig.Spec.Template)
@@ -105,13 +104,20 @@ func autofill(ctx context.Context) error {
 	updateField("RESOURCE_POOL", &controlPlaneMachineConfig.Spec.ResourcePool)
 	updateField("STORAGE_POLICY_NAME", &controlPlaneMachineConfig.Spec.StoragePolicyName)
 
-	updateField("SSH_AUTHORIZED_KEY", &workerMachineConfig.Spec.Users[0].SshAuthorizedKeys[0])
-	updateField("SSH_USERNAME", &workerMachineConfig.Spec.Users[0].Name)
-	updateField("TEMPLATE", &workerMachineConfig.Spec.Template)
-	updateField("DATASTORE", &workerMachineConfig.Spec.Datastore)
-	updateField("FOLDER", &workerMachineConfig.Spec.Folder)
-	updateField("RESOURCE_POOL", &workerMachineConfig.Spec.ResourcePool)
-	updateField("STORAGE_POLICY_NAME", &workerMachineConfig.Spec.StoragePolicyName)
+	var workerMachineConfigs []*v1alpha1.VSphereMachineConfig
+	for _, workerNodeGroupConfiguration := range clusterConfig.Spec.WorkerNodeGroupConfigurations {
+		workerMachineConfig := machineConfig[workerNodeGroupConfiguration.MachineGroupRef.Name]
+		updateFieldInt("WORKER_NODE_COUNT", &workerNodeGroupConfiguration.Count)
+		updateField("SSH_AUTHORIZED_KEY", &workerMachineConfig.Spec.Users[0].SshAuthorizedKeys[0])
+		updateField("SSH_USERNAME", &workerMachineConfig.Spec.Users[0].Name)
+		updateField("TEMPLATE", &workerMachineConfig.Spec.Template)
+		updateField("DATASTORE", &workerMachineConfig.Spec.Datastore)
+		updateField("FOLDER", &workerMachineConfig.Spec.Folder)
+		updateField("RESOURCE_POOL", &workerMachineConfig.Spec.ResourcePool)
+		updateField("STORAGE_POLICY_NAME", &workerMachineConfig.Spec.StoragePolicyName)
+		workerMachineConfigs = append(workerMachineConfigs, workerMachineConfig)
+
+	}
 
 	clusterOutput, err := yaml.Marshal(clusterConfig)
 	if err != nil {
@@ -125,7 +131,7 @@ func autofill(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error outputting yaml: %v", err)
 	}
-	workerMachineOutput, err := yaml.Marshal(workerMachineConfig)
+	workerMachineOutput, err := yaml.Marshal(workerMachineConfigs)
 	if err != nil {
 		return fmt.Errorf("error outputting yaml: %v", err)
 	}

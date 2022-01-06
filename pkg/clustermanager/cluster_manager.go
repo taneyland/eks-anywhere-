@@ -470,14 +470,18 @@ func (c *ClusterManager) EKSAClusterSpecChanged(ctx context.Context, cluster *ty
 			logger.V(3).Info("New control plane machine config spec is different from the existing spec")
 			return true, nil
 		}
-		existingWnVmc, err := c.clusterClient.GetEksaVSphereMachineConfig(ctx, cc.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef.Name, cluster.KubeconfigFile, newClusterSpec.Namespace)
-		if err != nil {
-			return false, err
-		}
-		wnVmc := machineConfigMap[newClusterSpec.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef.Name]
-		if !reflect.DeepEqual(existingWnVmc.Spec, wnVmc.Spec) {
-			logger.V(3).Info("New worker node machine config spec is different from the existing spec")
-			return true, nil
+		for _, workerNodeGroupConfiguration := range cc.Spec.WorkerNodeGroupConfigurations {
+			existingWnVmc, err := c.clusterClient.GetEksaVSphereMachineConfig(ctx, workerNodeGroupConfiguration.MachineGroupRef.Name, cluster.KubeconfigFile, newClusterSpec.Namespace)
+			if err != nil {
+				return false, err
+			}
+			for _, newWorkerNodeGroupConfiguration := range newClusterSpec.Spec.WorkerNodeGroupConfigurations {
+				wnVmc := machineConfigMap[newWorkerNodeGroupConfiguration.MachineGroupRef.Name]
+				if existingWnVmc.Name == wnVmc.Name && !reflect.DeepEqual(existingWnVmc.Spec, wnVmc.Spec) {
+					logger.V(3).Info("New worker node machine config spec is different from the existing spec")
+					return true, nil
+				}
+			}
 		}
 		if cc.Spec.ExternalEtcdConfiguration != nil {
 			existingEtcdVmc, err := c.clusterClient.GetEksaVSphereMachineConfig(ctx, cc.Spec.ExternalEtcdConfiguration.MachineGroupRef.Name, cluster.KubeconfigFile, newClusterSpec.Namespace)
@@ -724,14 +728,16 @@ func (c *ClusterManager) waitForMachineDeploymentReplicasReady(ctx context.Conte
 		return nil
 	}
 
-	timeout := time.Duration(clusterSpec.Spec.WorkerNodeGroupConfigurations[0].Count) * c.machineMaxWait
-	if timeout <= c.machinesMinWait {
-		timeout = c.machinesMinWait
-	}
+	for _, workerNodeGroupConfiguration := range clusterSpec.Spec.WorkerNodeGroupConfigurations {
+		timeout := time.Duration(workerNodeGroupConfiguration.Count) * c.machineMaxWait
+		if timeout <= c.machinesMinWait {
+			timeout = c.machinesMinWait
+		}
 
-	r := retrier.New(timeout)
-	if err := r.Retry(isMdReady); err != nil {
-		return fmt.Errorf("retries exhausted waiting for machinedeployment replicas to be ready: %v", err)
+		r := retrier.New(timeout)
+		if err := r.Retry(isMdReady); err != nil {
+			return fmt.Errorf("retries exhausted waiting for machinedeployment replicas to be ready: %v", err)
+		}
 	}
 	return nil
 }
