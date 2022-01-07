@@ -90,6 +90,11 @@ func TestFluxUpgradeSuccess(t *testing.T) {
 	tt := newUpgraderTest(t)
 	tt.newSpec.VersionsBundle.Flux.Version = "v0.2.0"
 
+	tt.newSpec.GitOpsConfig = &v1alpha1.GitOpsConfig{
+		Spec: v1alpha1.GitOpsConfigSpec{
+			Flux: tt.fluxConfig,
+		},
+	}
 	f, m, g := newAddonClient(t)
 
 	if err := setupTestFiles(t, g); err != nil {
@@ -124,6 +129,11 @@ func TestFluxUpgradeError(t *testing.T) {
 	tt := newUpgraderTest(t)
 	tt.newSpec.VersionsBundle.Flux.Version = "v0.2.0"
 
+	tt.newSpec.GitOpsConfig = &v1alpha1.GitOpsConfig{
+		Spec: v1alpha1.GitOpsConfigSpec{
+			Flux: tt.fluxConfig,
+		},
+	}
 	f, m, g := newAddonClient(t)
 
 	if err := setupTestFiles(t, g); err != nil {
@@ -149,7 +159,6 @@ func TestFluxUpgradeError(t *testing.T) {
 func TestFluxUpgradeNoGitOpsConfig(t *testing.T) {
 	tt := newUpgraderTest(t)
 	f, _, _ := newAddonClient(t)
-	tt.currentSpec.GitOpsConfig = nil
 	tt.newSpec.GitOpsConfig = nil
 
 	tt.Expect(f.Upgrade(tt.ctx, tt.cluster, tt.currentSpec, tt.newSpec)).To(BeNil())
