@@ -1446,7 +1446,7 @@ func TestSetupAndValidateCreateClusterNoDatastoreWorker(t *testing.T) {
 
 	err := provider.SetupAndValidateCreateCluster(ctx, clusterSpec)
 
-	thenErrorExpected(t, "VSphereMachineConfig datastore for worker nodes is not set or is empty", err)
+	thenErrorExpected(t, "VSphereMachineConfig datastore for worker node is not set or is empty", err)
 }
 
 func TestSetupAndValidateCreateClusterNoDatastoreEtcd(t *testing.T) {
@@ -1491,7 +1491,7 @@ func TestSetupAndValidateCreateClusterNoResourcePoolWorker(t *testing.T) {
 
 	err := provider.SetupAndValidateCreateCluster(ctx, clusterSpec)
 
-	thenErrorExpected(t, "VSphereMachineConfig VM resourcePool for worker nodes is not set or is empty", err)
+	thenErrorExpected(t, "VSphereMachineConfig VM resourcePool for worker node is not set or is empty", err)
 }
 
 func TestSetupAndValidateCreateClusterNoResourcePoolEtcd(t *testing.T) {
