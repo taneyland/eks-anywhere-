@@ -328,7 +328,6 @@ func TestClusterctlUpgradeAllProvidersSucess(t *testing.T) {
 	tt.e.EXPECT().ExecuteWithEnv(tt.ctx, tt.providerEnvMap,
 		"upgrade", "apply",
 		"--config", test.OfType("string"),
-		"--management-group", "capi-system/cluster-api",
 		"--kubeconfig", tt.cluster.KubeconfigFile,
 		"--control-plane", "capi-kubeadm-control-plane-system/kubeadm:v0.3.19",
 		"--core", "capi-system/cluster-api:v0.3.19",
@@ -356,7 +355,6 @@ func TestClusterctlUpgradeInfrastructureProvidersSucess(t *testing.T) {
 	tt.e.EXPECT().ExecuteWithEnv(tt.ctx, tt.providerEnvMap,
 		"upgrade", "apply",
 		"--config", test.OfType("string"),
-		"--management-group", "capi-system/cluster-api",
 		"--kubeconfig", tt.cluster.KubeconfigFile,
 		"--infrastructure", "capv-system/vsphere:v0.4.1",
 	)
@@ -379,7 +377,6 @@ func TestClusterctlUpgradeInfrastructureProvidersError(t *testing.T) {
 	tt.e.EXPECT().ExecuteWithEnv(tt.ctx, tt.providerEnvMap,
 		"upgrade", "apply",
 		"--config", test.OfType("string"),
-		"--management-group", "capi-system/cluster-api",
 		"--kubeconfig", tt.cluster.KubeconfigFile,
 		"--infrastructure", "capv-system/vsphere:v0.4.1",
 	).Return(bytes.Buffer{}, errors.New("error in exec"))
@@ -426,7 +423,10 @@ var versionBundle = &cluster.VersionsBundle{
 			Webhook: v1alpha1.Image{
 				URI: "public.ecr.aws/l0g8r8j6/jetstack/cert-manager-webhook:v1.1.0",
 			},
-			Version: "v1.1.0+88d7476",
+			Manifest: v1alpha1.Manifest{
+				URI: "testdata/fake_manifest.yaml",
+			},
+			Version: "v1.5.3",
 		},
 		ClusterAPI: v1alpha1.CoreClusterAPI{
 			Version: "v0.3.19",

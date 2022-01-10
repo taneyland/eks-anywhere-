@@ -126,11 +126,12 @@ type BottlerocketAdminBundle struct {
 }
 
 type CertManagerBundle struct {
-	Version    string `json:"version,omitempty"`
-	Acmesolver Image  `json:"acmesolver"`
-	Cainjector Image  `json:"cainjector"`
-	Controller Image  `json:"controller"`
-	Webhook    Image  `json:"webhook"`
+	Version    string   `json:"version,omitempty"`
+	Acmesolver Image    `json:"acmesolver"`
+	Cainjector Image    `json:"cainjector"`
+	Controller Image    `json:"controller"`
+	Webhook    Image    `json:"webhook"`
+	Manifest   Manifest `json:"manifest"`
 }
 
 type CoreClusterAPI struct {
@@ -235,6 +236,7 @@ type EtcdadmControllerBundle struct {
 type TinkerbellBundle struct {
 	Version              string   `json:"version"`
 	ClusterAPIController Image    `json:"clusterAPIController"`
+	KubeVip              Image    `json:"kubeVip"`
 	Components           Manifest `json:"components"`
 	Metadata             Manifest `json:"metadata"`
 	ClusterTemplate      Manifest `json:"clusterTemplate"`

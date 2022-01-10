@@ -74,6 +74,12 @@ func buildOverridesLayer(clusterSpec *cluster.Spec, clusterName string, provider
 
 	infraBundles := []types.InfrastructureBundle{
 		{
+			FolderName: filepath.Join("cert-manager", bundle.CertManager.Version),
+			Manifests: []v1alpha1.Manifest{
+				bundle.CertManager.Manifest,
+			},
+		},
+		{
 			FolderName: filepath.Join("bootstrap-kubeadm", bundle.Bootstrap.Version),
 			Manifests: []v1alpha1.Manifest{
 				bundle.Bootstrap.Components,
@@ -310,7 +316,6 @@ func (c *Clusterctl) Upgrade(ctx context.Context, managementCluster *types.Clust
 	upgradeCommand := []string{
 		"upgrade", "apply",
 		"--config", clusterctlConfig.configFile,
-		"--management-group", "capi-system/cluster-api",
 		"--kubeconfig", managementCluster.KubeconfigFile,
 	}
 
