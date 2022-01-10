@@ -68,7 +68,7 @@ func (cor *clusterReconciler) Reconcile(ctx context.Context, objectKey types.Nam
 		vdc := &anywherev1.VSphereDatacenterConfig{}
 		cpVmc := &anywherev1.VSphereMachineConfig{}
 		etcdVmc := &anywherev1.VSphereMachineConfig{}
-		workerVmc := &anywherev1.VSphereMachineConfig{}
+		workerVmcs := []*anywherev1.VSphereMachineConfig{}
 		err := cor.FetchObject(ctx, types.NamespacedName{Namespace: objectKey.Namespace, Name: cs.Spec.DatacenterRef.Name}, vdc)
 		if err != nil {
 			return err
@@ -77,12 +77,18 @@ func (cor *clusterReconciler) Reconcile(ctx context.Context, objectKey types.Nam
 		if err != nil {
 			return err
 		}
-		if len(cs.Spec.WorkerNodeGroupConfigurations) != 1 {
-			return fmt.Errorf("expects WorkerNodeGroupConfigurations's length to be 1, but found %d", len(cs.Spec.WorkerNodeGroupConfigurations))
+		if len(cs.Spec.WorkerNodeGroupConfigurations) == 0 {
+			return fmt.Errorf("expects WorkerNodeGroupConfigurations's length to be atleast, but found %d", len(cs.Spec.WorkerNodeGroupConfigurations))
 		}
-		err = cor.FetchObject(ctx, types.NamespacedName{Namespace: objectKey.Namespace, Name: cs.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef.Name}, workerVmc)
-		if err != nil {
-			return err
+		for _, workerNodeGroupConfiguration := range cs.Spec.WorkerNodeGroupConfigurations {
+			for _, vmc := range workerVmcs {
+				if vmc.Name == workerNodeGroupConfiguration.MachineGroupRef.Name {
+					err = cor.FetchObject(ctx, types.NamespacedName{Namespace: objectKey.Namespace, Name: workerNodeGroupConfiguration.MachineGroupRef.Name}, vmc)
+					if err != nil {
+						return err
+					}
+				}
+			}
 		}
 		if cs.Spec.ExternalEtcdConfiguration != nil {
 			err = cor.FetchObject(ctx, types.NamespacedName{Namespace: objectKey.Namespace, Name: cs.Spec.ExternalEtcdConfiguration.MachineGroupRef.Name}, etcdVmc)
@@ -90,7 +96,7 @@ func (cor *clusterReconciler) Reconcile(ctx context.Context, objectKey types.Nam
 				return err
 			}
 		}
-		r, err := cor.vsphereTemplate.TemplateResources(ctx, cs, spec, *vdc, *cpVmc, *workerVmc, *etcdVmc)
+		r, err := cor.vsphereTemplate.TemplateResources(ctx, cs, spec, *vdc, *cpVmc, *etcdVmc, workerVmcs)
 		if err != nil {
 			return err
 		}

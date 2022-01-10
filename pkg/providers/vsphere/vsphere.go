@@ -647,14 +647,12 @@ func (vs *VsphereTemplateBuilder) GenerateCAPISpecControlPlane(clusterSpec *clus
 	return bytes, nil
 }
 
-func (vs *VsphereTemplateBuilder) GenerateCAPISpecWorkers(clusterSpec *cluster.Spec, buildOptions ...providers.BuildMapOption) (content []byte, err error) {
+func (vs *VsphereTemplateBuilder) GenerateCAPISpecWorkers(clusterSpec *cluster.Spec) (content []byte, err error) {
 	var workerSpecs [][]byte
 	for _, workerNodeGroupSpec := range vs.workerNodeGroupMachineSpecs {
 		values := buildTemplateMapMD(clusterSpec, *vs.datacenterSpec, *workerNodeGroupSpec)
-
-		for _, buildOption := range buildOptions {
-			buildOption(values)
-		}
+		values["workloadTemplateName"] = vs.WorkerMachineTemplateName(clusterSpec.ObjectMeta.Name)
+		values["vsphereWorkerSshAuthorizedKey"] = workerNodeGroupSpec.Users
 
 		bytes, err := templater.Execute(defaultClusterConfigMD, values)
 		if err != nil {
@@ -851,6 +849,9 @@ func buildTemplateMapMD(clusterSpec *cluster.Spec, datacenterSpec v1alpha1.VSphe
 		values["bottlerocketBootstrapVersion"] = bundle.BottleRocketBootstrap.Bootstrap.Tag()
 	}
 
+	values["workloadTemplateName"] = t
+	values["vsphereWorkerSshAuthorizedKey"] = workerNodeGroupMachineSpec.Users
+
 	return values
 }
 
@@ -964,11 +965,7 @@ func (p *vsphereProvider) generateCAPISpecForCreate(ctx context.Context, cluster
 	if err != nil {
 		return nil, nil, err
 	}
-	workersOpt := func(values map[string]interface{}) {
-		values["workloadTemplateName"] = p.templateBuilder.WorkerMachineTemplateName(clusterName)
-		values["vsphereWorkerSshAuthorizedKey"] = p.workerSshAuthKey
-	}
-	workersSpec, err = p.templateBuilder.GenerateCAPISpecWorkers(clusterSpec, workersOpt)
+	workersSpec, err = p.templateBuilder.GenerateCAPISpecWorkers(clusterSpec)
 	if err != nil {
 		return nil, nil, err
 	}

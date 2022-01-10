@@ -206,12 +206,10 @@ func (vs *TinkerbellTemplateBuilder) GenerateCAPISpecControlPlane(clusterSpec *c
 	return bytes, nil
 }
 
-func (vs *TinkerbellTemplateBuilder) GenerateCAPISpecWorkers(clusterSpec *cluster.Spec, buildOptions ...providers.BuildMapOption) (content []byte, err error) {
+func (vs *TinkerbellTemplateBuilder) GenerateCAPISpecWorkers(clusterSpec *cluster.Spec) (content []byte, err error) {
 	values := buildTemplateMapMD(clusterSpec, *vs.workerNodeGroupMachineSpec)
-
-	for _, buildOption := range buildOptions {
-		buildOption(values)
-	}
+	values["workloadTemplateName"] = vs.workerNodeGroupMachineSpec.
+	values["tinkerbellWorkerSshAuthorizedKey"] = sshAuthorizedKey(workerTmc.Spec.Users)
 
 	bytes, err := templater.Execute(defaultClusterConfigMD, values)
 	if err != nil {

@@ -41,9 +41,13 @@ type TinkerbellTemplate struct {
 	now anywhereTypes.NowFunc
 }
 
-func (r *VsphereTemplate) TemplateResources(ctx context.Context, eksaCluster *anywherev1.Cluster, clusterSpec *cluster.Spec, vdc anywherev1.VSphereDatacenterConfig, cpVmc, workerVmc, etcdVmc anywherev1.VSphereMachineConfig) ([]*unstructured.Unstructured, error) {
+func (r *VsphereTemplate) TemplateResources(ctx context.Context, eksaCluster *anywherev1.Cluster, clusterSpec *cluster.Spec, vdc anywherev1.VSphereDatacenterConfig, cpVmc, etcdVmc anywherev1.VSphereMachineConfig, workerVmc []*anywherev1.VSphereMachineConfig) ([]*unstructured.Unstructured, error) {
+	var workerNodeGroupMachineSpecs []*anywherev1.VSphereMachineConfigSpec
+	for _, wnConfig := range workerVmc {
+		workerNodeGroupMachineSpecs = append(workerNodeGroupMachineSpecs, &wnConfig.Spec)
+	}
 	// control plane and etcd updates are prohibited in controller so those specs should not change
-	templateBuilder := vsphere.NewVsphereTemplateBuilder(&vdc.Spec, &cpVmc.Spec, &workerVmc.Spec, &etcdVmc.Spec, r.now)
+	templateBuilder := vsphere.NewVsphereTemplateBuilder(&vdc.Spec, &cpVmc.Spec, &etcdVmc.Spec, workerNodeGroupMachineSpecs, r.now)
 	clusterName := clusterSpec.ObjectMeta.Name
 
 	oldVdc, err := r.ExistingVSphereDatacenterConfig(ctx, eksaCluster)
@@ -72,15 +76,17 @@ func (r *VsphereTemplate) TemplateResources(ctx context.Context, eksaCluster *an
 	}
 
 	var workloadTemplateName string
-	updateWorkloadTemplate := vsphere.AnyImmutableFieldChanged(oldVdc, &vdc, oldWorkerVmc, &workerVmc)
-	if updateWorkloadTemplate {
-		workloadTemplateName = templateBuilder.WorkerMachineTemplateName(clusterName)
-	} else {
-		mcDeployment, err := r.MachineDeployment(ctx, eksaCluster)
-		if err != nil {
-			return nil, err
+	for _, newWorkerVmc := range workerVmc {
+		updateWorkloadTemplate := vsphere.AnyImmutableFieldChanged(oldVdc, &vdc, oldWorkerVmc, newWorkerVmc)
+		if updateWorkloadTemplate {
+			workloadTemplateName = templateBuilder.WorkerMachineTemplateName(clusterName)
+		} else {
+			mcDeployment, err := r.MachineDeployment(ctx, eksaCluster)
+			if err != nil {
+				return nil, err
+			}
+			workloadTemplateName = mcDeployment.Spec.Template.Spec.InfrastructureRef.Name
 		}
-		workloadTemplateName = mcDeployment.Spec.Template.Spec.InfrastructureRef.Name
 	}
 
 	var etcdTemplateName string
@@ -112,12 +118,7 @@ func (r *VsphereTemplate) TemplateResources(ctx context.Context, eksaCluster *an
 		values["etcdTemplateName"] = etcdTemplateName
 	}
 
-	workersOpt := func(values map[string]interface{}) {
-		values["workloadTemplateName"] = workloadTemplateName
-		values["vsphereWorkerSshAuthorizedKey"] = sshAuthorizedKey(workerVmc.Spec.Users)
-	}
-
-	return generateTemplateResources(templateBuilder, clusterSpec, cpOpt, workersOpt)
+	return generateTemplateResources(templateBuilder, clusterSpec, cpOpt)
 }
 
 func (r *TinkerbellTemplate) TemplateResources(ctx context.Context, eksaCluster *anywherev1.Cluster, clusterSpec *cluster.Spec, tdc anywherev1.TinkerbellDatacenterConfig, cpTmc, workerTmc, etcdTmc anywherev1.TinkerbellMachineConfig) ([]*unstructured.Unstructured, error) {
@@ -151,15 +152,15 @@ func (r *TinkerbellTemplate) TemplateResources(ctx context.Context, eksaCluster 
 		values["tinkerbellWorkerSshAuthorizedKey"] = sshAuthorizedKey(workerTmc.Spec.Users)
 	}
 
-	return generateTemplateResources(templateBuilder, clusterSpec, cpOpt, workersOpt)
+	return generateTemplateResources(templateBuilder, clusterSpec, cpOpt)
 }
 
-func generateTemplateResources(builder providers.TemplateBuilder, clusterSpec *cluster.Spec, cpOpt, workersOpt providers.BuildMapOption) ([]*unstructured.Unstructured, error) {
+func generateTemplateResources(builder providers.TemplateBuilder, clusterSpec *cluster.Spec, cpOpt providers.BuildMapOption) ([]*unstructured.Unstructured, error) {
 	cp, err := builder.GenerateCAPISpecControlPlane(clusterSpec, cpOpt)
 	if err != nil {
 		return nil, err
 	}
-	md, err := builder.GenerateCAPISpecWorkers(clusterSpec, workersOpt)
+	md, err := builder.GenerateCAPISpecWorkers(clusterSpec)
 	if err != nil {
 		return nil, err
 	}
