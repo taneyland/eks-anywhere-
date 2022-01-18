@@ -475,14 +475,16 @@ func (p *vsphereProvider) validateMachineConfigsNameUniqueness(ctx context.Conte
 		}
 	}
 
-	workerMachineConfigName := clusterSpec.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef.Name
-	if prevSpec.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef.Name != workerMachineConfigName {
-		em, err := p.providerKubectlClient.SearchVsphereMachineConfig(ctx, workerMachineConfigName, clusterSpec.ManagementCluster.KubeconfigFile, clusterSpec.GetNamespace())
-		if err != nil {
-			return err
-		}
-		if len(em) > 0 {
-			return fmt.Errorf("worker nodes VSphereMachineConfig %s already exists", workerMachineConfigName)
+	for i, prevMachineConfig := range prevSpec.Spec.WorkerNodeGroupConfigurations {
+		workerMachineConfigName := clusterSpec.Spec.WorkerNodeGroupConfigurations[i].MachineGroupRef.Name
+		if prevMachineConfig.MachineGroupRef.Name != workerMachineConfigName {
+			em, err := p.providerKubectlClient.SearchVsphereMachineConfig(ctx, workerMachineConfigName, clusterSpec.ManagementCluster.KubeconfigFile, clusterSpec.GetNamespace())
+			if err != nil {
+				return err
+			}
+			if len(em) > 0 {
+				return fmt.Errorf("worker nodes VSphereMachineConfig %s already exists", workerMachineConfigName)
+			}
 		}
 	}
 
@@ -901,24 +903,34 @@ func (p *vsphereProvider) generateCAPISpecForUpgrade(ctx context.Context, bootst
 		controlPlaneTemplateName = p.templateBuilder.CPMachineTemplateName(clusterName)
 	}
 
+	var existingWorkerNodeGroup bool
 	workloadTemplateNames := make([]string, 0, len(newClusterSpec.Spec.WorkerNodeGroupConfigurations))
 	for _, workerNodeGroupConfiguration := range newClusterSpec.Spec.WorkerNodeGroupConfigurations {
+		existingWorkerNodeGroup = false
 		workerMachineConfig := p.machineConfigs[workerNodeGroupConfiguration.MachineGroupRef.Name]
-		workerVmc, err := p.providerKubectlClient.GetEksaVSphereMachineConfig(ctx, workerNodeGroupConfiguration.MachineGroupRef.Name, workloadCluster.KubeconfigFile, newClusterSpec.Namespace)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		needsNewWorkloadTemplate := NeedsNewWorkloadTemplate(currentSpec, newClusterSpec, vdc, p.datacenterConfig, workerVmc, workerMachineConfig)
-		if !needsNewWorkloadTemplate {
-			machineDeploymentName := fmt.Sprintf("%s-%s", newClusterSpec.Name, workerNodeGroupConfiguration.Name)
-			md, err := p.providerKubectlClient.GetMachineDeployment(ctx, workloadCluster, machineDeploymentName, executables.WithCluster(bootstrapCluster), executables.WithNamespace(constants.EksaSystemNamespace))
-			if err != nil {
-				return nil, nil, err
+		for _, prevWorkerNodeGroupConfig := range currentSpec.Spec.WorkerNodeGroupConfigurations {
+			if prevWorkerNodeGroupConfig.MachineGroupRef.Name == workerNodeGroupConfiguration.MachineGroupRef.Name {
+				existingWorkerNodeGroup = true
+				workerVmc, err := p.providerKubectlClient.GetEksaVSphereMachineConfig(ctx, workerNodeGroupConfiguration.MachineGroupRef.Name, workloadCluster.KubeconfigFile, newClusterSpec.Namespace)
+				if err != nil {
+					return nil, nil, err
+				}
+				needsNewWorkloadTemplate := NeedsNewWorkloadTemplate(currentSpec, newClusterSpec, vdc, p.datacenterConfig, workerVmc, workerMachineConfig)
+				if !needsNewWorkloadTemplate {
+					machineDeploymentName := fmt.Sprintf("%s-%s", newClusterSpec.Name, workerNodeGroupConfiguration.Name)
+					md, err := p.providerKubectlClient.GetMachineDeployment(ctx, workloadCluster, machineDeploymentName, executables.WithCluster(bootstrapCluster), executables.WithNamespace(constants.EksaSystemNamespace))
+					if err != nil {
+						return nil, nil, err
+					}
+					workloadTemplateName = md.Spec.Template.Spec.InfrastructureRef.Name
+					workloadTemplateNames = append(workloadTemplateNames, workloadTemplateName)
+				} else {
+					workloadTemplateName = p.templateBuilder.WorkerMachineTemplateName(clusterName, workerNodeGroupConfiguration.Name)
+					workloadTemplateNames = append(workloadTemplateNames, workloadTemplateName)
+				}
 			}
-			workloadTemplateName = md.Spec.Template.Spec.InfrastructureRef.Name
-			workloadTemplateNames = append(workloadTemplateNames, workloadTemplateName)
-		} else {
+		}
+		if !existingWorkerNodeGroup {
 			workloadTemplateName = p.templateBuilder.WorkerMachineTemplateName(clusterName, workerNodeGroupConfiguration.Name)
 			workloadTemplateNames = append(workloadTemplateNames, workloadTemplateName)
 		}
@@ -1163,15 +1175,22 @@ func (p *vsphereProvider) ValidateNewSpec(ctx context.Context, cluster *types.Cl
 	oSpec := prevDatacenter.Spec
 	nSpec := datacenter.Spec
 
+	prevMachineConfigs := prevSpec.MachineConfigRefs()
+
 	for _, machineConfigRef := range clusterSpec.MachineConfigRefs() {
 		machineConfig, ok := p.machineConfigs[machineConfigRef.Name]
 		if !ok {
 			return fmt.Errorf("cannot find machine config %s in vsphere provider machine configs", machineConfigRef.Name)
 		}
 
-		err = p.validateMachineConfigImmutability(ctx, cluster, machineConfig, clusterSpec)
-		if err != nil {
-			return err
+		for _, prevMachineConfig := range prevMachineConfigs {
+			prevMachineConfig, ok := p.machineConfigs[prevMachineConfig.Name]
+			if ok && prevMachineConfig.Name == machineConfig.Name {
+				err = p.validateMachineConfigImmutability(ctx, cluster, machineConfig, clusterSpec)
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 
