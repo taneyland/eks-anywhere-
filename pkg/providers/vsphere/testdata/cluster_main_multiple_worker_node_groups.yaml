@@ -23,11 +23,6 @@ spec:
         name: test-wn
         kind: VSphereMachineConfig
       name: md-1
-  externalEtcdConfiguration:
-    count: 3
-    machineGroupRef:
-      name: test-etcd
-      kind: VSphereMachineConfig
   datacenterRef:
     kind: VSphereDatacenterConfig
     name: test

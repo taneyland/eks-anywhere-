@@ -544,12 +544,12 @@ func TestProviderGenerateCAPISpecForUpgradeMultipleWorkerNodeGroups(t *testing.T
 	tests := []struct {
 		testName          string
 		clusterconfigFile string
-		wantCPFile        string
+		wantMDFile        string
 	}{
 		{
 			testName:          "adding a worker node group",
 			clusterconfigFile: "cluster_main_multiple_worker_node_groups.yaml",
-			wantCPFile:        "testdata/expected_results_minimal_new_wn_group.yaml",
+			wantMDFile:        "testdata/expected_results_minimal_new_worker_node_group.yaml",
 		},
 	}
 	for _, tt := range tests {
@@ -573,11 +573,14 @@ func TestProviderGenerateCAPISpecForUpgradeMultipleWorkerNodeGroups(t *testing.T
 			vsphereMachineConfig := &v1alpha1.VSphereMachineConfig{
 				Spec: v1alpha1.VSphereMachineConfigSpec{},
 			}
+			newClusterSpec := clusterSpec
+			newConfig := v1alpha1.WorkerNodeGroupConfiguration{Count: 1, MachineGroupRef: &v1alpha1.Ref{Name: "test-wn", Kind: "VSphereMachineConfig"}, Name: "md-2"}
+			newClusterSpec.Spec.WorkerNodeGroupConfigurations = append(newClusterSpec.Spec.WorkerNodeGroupConfigurations, newConfig)
 
 			kubectl.EXPECT().GetEksaCluster(ctx, cluster, clusterSpec.Name).Return(clusterSpec.Cluster, nil)
 			kubectl.EXPECT().GetEksaVSphereDatacenterConfig(ctx, cluster.Name, cluster.KubeconfigFile, clusterSpec.Namespace).Return(vsphereDatacenter, nil)
 			kubectl.EXPECT().GetEksaVSphereMachineConfig(ctx, clusterSpec.Spec.ControlPlaneConfiguration.MachineGroupRef.Name, cluster.KubeconfigFile, clusterSpec.Namespace).Return(vsphereMachineConfig, nil)
-			kubectl.EXPECT().GetEksaVSphereMachineConfig(ctx, clusterSpec.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef.Name, cluster.KubeconfigFile, clusterSpec.Namespace).Return(vsphereMachineConfig, nil)
+			kubectl.EXPECT().GetEksaVSphereMachineConfig(ctx, clusterSpec.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef.Name, cluster.KubeconfigFile, clusterSpec.Namespace).Return(vsphereMachineConfig, nil).AnyTimes()
 			datacenterConfig := givenDatacenterConfig(t, tt.clusterconfigFile)
 			machineConfigs := givenMachineConfigs(t, tt.clusterconfigFile)
 			provider := newProviderWithKubectl(t, datacenterConfig, machineConfigs, clusterSpec.Cluster, kubectl)
@@ -590,12 +593,12 @@ func TestProviderGenerateCAPISpecForUpgradeMultipleWorkerNodeGroups(t *testing.T
 				t.Fatalf("failed to setup and validate: %v", err)
 			}
 
-			cp, _, err := provider.GenerateCAPISpecForUpgrade(context.Background(), bootstrapCluster, cluster, clusterSpec, clusterSpec.DeepCopy())
+			_, md, err := provider.GenerateCAPISpecForUpgrade(context.Background(), bootstrapCluster, cluster, clusterSpec, newClusterSpec)
 			if err != nil {
 				t.Fatalf("failed to generate cluster api spec contents: %v", err)
 			}
 
-			test.AssertContentToFile(t, string(cp), tt.wantCPFile)
+			test.AssertContentToFile(t, string(md), tt.wantMDFile)
 		})
 	}
 }
@@ -813,11 +816,10 @@ func TestProviderGenerateCAPISpecForCreateWithMultipleWorkerNodeGroups(t *testin
 		t.Fatalf("failed to setup and validate: %v", err)
 	}
 
-	cp, md, err := provider.GenerateCAPISpecForCreate(context.Background(), cluster, clusterSpec)
+	_, md, err := provider.GenerateCAPISpecForCreate(context.Background(), cluster, clusterSpec)
 	if err != nil {
 		t.Fatalf("failed to generate cluster api spec contents: %v", err)
 	}
-	test.AssertContentToFile(t, string(cp), "testdata/expected_results_main_cp.yaml")
 	test.AssertContentToFile(t, string(md), "testdata/expected_results_main_multiple_worker_node_groups.yaml")
 }
 

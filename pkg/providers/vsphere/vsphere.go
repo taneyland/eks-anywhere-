@@ -909,7 +909,7 @@ func (p *vsphereProvider) generateCAPISpecForUpgrade(ctx context.Context, bootst
 		existingWorkerNodeGroup = false
 		workerMachineConfig := p.machineConfigs[workerNodeGroupConfiguration.MachineGroupRef.Name]
 		for _, prevWorkerNodeGroupConfig := range currentSpec.Spec.WorkerNodeGroupConfigurations {
-			if prevWorkerNodeGroupConfig.MachineGroupRef.Name == workerNodeGroupConfiguration.MachineGroupRef.Name {
+			if prevWorkerNodeGroupConfig.Name == workerNodeGroupConfiguration.Name {
 				existingWorkerNodeGroup = true
 				workerVmc, err := p.providerKubectlClient.GetEksaVSphereMachineConfig(ctx, workerNodeGroupConfiguration.MachineGroupRef.Name, workloadCluster.KubeconfigFile, newClusterSpec.Namespace)
 				if err != nil {
@@ -1184,7 +1184,7 @@ func (p *vsphereProvider) ValidateNewSpec(ctx context.Context, cluster *types.Cl
 		}
 
 		for _, prevMachineConfig := range prevMachineConfigs {
-			prevMachineConfig, ok := p.machineConfigs[prevMachineConfig.Name]
+			_, ok := p.machineConfigs[prevMachineConfig.Name]
 			if ok && prevMachineConfig.Name == machineConfig.Name {
 				err = p.validateMachineConfigImmutability(ctx, cluster, machineConfig, clusterSpec)
 				if err != nil {
