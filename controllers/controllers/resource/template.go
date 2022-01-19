@@ -2,6 +2,7 @@ package resource
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	etcdv1 "github.com/mrajashree/etcdadm-controller/api/v1alpha3"
@@ -41,11 +42,17 @@ type TinkerbellTemplate struct {
 	now anywhereTypes.NowFunc
 }
 
-func (r *VsphereTemplate) TemplateResources(ctx context.Context, eksaCluster *anywherev1.Cluster, clusterSpec *cluster.Spec, vdc anywherev1.VSphereDatacenterConfig, cpVmc, etcdVmc anywherev1.VSphereMachineConfig, workerVmc []*anywherev1.VSphereMachineConfig) ([]*unstructured.Unstructured, error) {
+func (r *VsphereTemplate) TemplateResources(ctx context.Context, eksaCluster *anywherev1.Cluster, clusterSpec *cluster.Spec, vdc anywherev1.VSphereDatacenterConfig, cpVmc, etcdVmc anywherev1.VSphereMachineConfig, workerVmc []anywherev1.VSphereMachineConfig) ([]*unstructured.Unstructured, error) {
 	workerNodeGroupMachineSpecs := make(map[string]anywherev1.VSphereMachineConfigSpec, len(workerVmc))
 	for _, wnConfig := range workerVmc {
 		workerNodeGroupMachineSpecs[wnConfig.Name] = wnConfig.Spec
+		fmt.Println("loop")
+		fmt.Println(wnConfig.Spec.Users[0].Name)
+		fmt.Println(wnConfig.Name)
 	}
+
+	fmt.Println(workerNodeGroupMachineSpecs)
+
 	// control plane and etcd updates are prohibited in controller so those specs should not change
 	templateBuilder := vsphere.NewVsphereTemplateBuilder(&vdc.Spec, &cpVmc.Spec, &etcdVmc.Spec, workerNodeGroupMachineSpecs, r.now)
 	clusterName := clusterSpec.ObjectMeta.Name
@@ -78,7 +85,7 @@ func (r *VsphereTemplate) TemplateResources(ctx context.Context, eksaCluster *an
 	var workloadTemplateNames []string
 	for _, vmc := range workerVmc {
 		oldVmc := oldWorkerVmcs[vmc.Name]
-		updateWorkloadTemplate := vsphere.AnyImmutableFieldChanged(oldVdc, &vdc, &oldVmc, vmc)
+		updateWorkloadTemplate := vsphere.AnyImmutableFieldChanged(oldVdc, &vdc, &oldVmc, &vmc)
 		if updateWorkloadTemplate {
 			workloadTemplateName := templateBuilder.WorkerMachineTemplateName(clusterName, clusterSpec.Spec.WorkerNodeGroupConfigurations[0].Name)
 			workloadTemplateNames = append(workloadTemplateNames, workloadTemplateName)

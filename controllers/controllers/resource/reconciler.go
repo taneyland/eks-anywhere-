@@ -69,7 +69,7 @@ func (cor *clusterReconciler) Reconcile(ctx context.Context, objectKey types.Nam
 		cpVmc := &anywherev1.VSphereMachineConfig{}
 		etcdVmc := &anywherev1.VSphereMachineConfig{}
 		workerVmc := &anywherev1.VSphereMachineConfig{}
-		workerVmcs := make([]*anywherev1.VSphereMachineConfig, 0, len(cs.Spec.WorkerNodeGroupConfigurations))
+		workerVmcs := make([]anywherev1.VSphereMachineConfig, 0, len(cs.Spec.WorkerNodeGroupConfigurations))
 		err := cor.FetchObject(ctx, types.NamespacedName{Namespace: objectKey.Namespace, Name: cs.Spec.DatacenterRef.Name}, vdc)
 		if err != nil {
 			return err
@@ -83,7 +83,7 @@ func (cor *clusterReconciler) Reconcile(ctx context.Context, objectKey types.Nam
 			if err != nil {
 				return err
 			}
-			workerVmcs = append(workerVmcs, workerVmc)
+			workerVmcs = append(workerVmcs, *workerVmc)
 		}
 		if cs.Spec.ExternalEtcdConfiguration != nil {
 			err = cor.FetchObject(ctx, types.NamespacedName{Namespace: objectKey.Namespace, Name: cs.Spec.ExternalEtcdConfiguration.MachineGroupRef.Name}, etcdVmc)
