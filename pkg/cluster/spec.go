@@ -187,7 +187,7 @@ func NewSpecFromClusterConfig(clusterConfigPath string, cliVersion version.Info,
 		return nil, err
 	}
 
-	eksd, err := s.reader.GetEksdRelease(versionsBundle)
+	eksd, err := s.reader.GetEksdRelease(versionsBundle.EksD)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +261,7 @@ func BuildSpecFromBundles(cluster *eksav1alpha1.Cluster, bundles *v1alpha1.Bundl
 		return nil, err
 	}
 
-	eksd, err := s.reader.GetEksdRelease(versionsBundle)
+	eksd, err := s.reader.GetEksdRelease(versionsBundle.EksD)
 	if err != nil {
 		return nil, err
 	}
@@ -286,6 +286,15 @@ func (s *Spec) newManifestReader() *ManifestReader {
 }
 
 func (s *Spec) getVersionsBundle(clusterConfig *eksav1alpha1.Cluster, bundles *v1alpha1.Bundles) (*v1alpha1.VersionsBundle, error) {
+	for _, versionsBundle := range bundles.Spec.VersionsBundles {
+		if versionsBundle.KubeVersion == string(clusterConfig.Spec.KubernetesVersion) {
+			return &versionsBundle, nil
+		}
+	}
+	return nil, fmt.Errorf("kubernetes version %s is not supported by bundles manifest %d", clusterConfig.Spec.KubernetesVersion, bundles.Spec.Number)
+}
+
+func (s *Spec) getEksdRelease(clusterConfig *eksav1alpha1.Cluster, bundles *v1alpha1.Bundles) (*v1alpha1.VersionsBundle, error) {
 	for _, versionsBundle := range bundles.Spec.VersionsBundles {
 		if versionsBundle.KubeVersion == string(clusterConfig.Spec.KubernetesVersion) {
 			return &versionsBundle, nil
@@ -422,7 +431,7 @@ func GetEksdRelease(cliVersion version.Info, clusterConfig *eksav1alpha1.Cluster
 		return nil, nil, err
 	}
 
-	eksdRelease, err := s.reader.GetEksdRelease(versionsBundle)
+	eksdRelease, err := s.reader.GetEksdRelease(versionsBundle.EksD)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -454,6 +463,14 @@ func (s *Spec) LoadManifest(manifest v1alpha1.Manifest) (*Manifest, error) {
 
 func userAgent(eksAComponent, version string) string {
 	return fmt.Sprintf("eks-a-%s/%s", eksAComponent, version)
+}
+
+func (s *Spec) GetEksdRelease(release v1alpha1.EksDRelease) (*eksdv1alpha1.Release, error) {
+	eksd, err := s.reader.GetEksdRelease(release)
+	if err != nil {
+		return nil, err
+	}
+	return eksd, nil
 }
 
 func (vb *VersionsBundle) KubeDistroImages() []v1alpha1.Image {

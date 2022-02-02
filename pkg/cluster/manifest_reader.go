@@ -34,8 +34,8 @@ func (m *ManifestReader) GetReleases(releasesManifest string) (*v1alpha1.Release
 	return releases, nil
 }
 
-func (m *ManifestReader) GetEksdRelease(versionsBundle *v1alpha1.VersionsBundle) (*eksdv1alpha1.Release, error) {
-	content, err := m.ReadFile(versionsBundle.EksD.EksDReleaseUrl)
+func (m *ManifestReader) GetEksdRelease(release v1alpha1.EksDRelease) (*eksdv1alpha1.Release, error) {
+	content, err := m.ReadFile(release.EksDReleaseUrl)
 	if err != nil {
 		return nil, err
 	}

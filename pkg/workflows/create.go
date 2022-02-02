@@ -21,16 +21,18 @@ type Create struct {
 	clusterManager interfaces.ClusterManager
 	addonManager   interfaces.AddonManager
 	writer         filewriter.FileWriter
+	reader         cluster.ManifestReader
 }
 
 func NewCreate(bootstrapper interfaces.Bootstrapper, provider providers.Provider,
-	clusterManager interfaces.ClusterManager, addonManager interfaces.AddonManager, writer filewriter.FileWriter) *Create {
+	clusterManager interfaces.ClusterManager, addonManager interfaces.AddonManager, writer filewriter.FileWriter, reader cluster.ManifestReader) *Create {
 	return &Create{
 		bootstrapper:   bootstrapper,
 		provider:       provider,
 		clusterManager: clusterManager,
 		addonManager:   addonManager,
 		writer:         writer,
+		reader:         reader,
 	}
 }
 
@@ -49,6 +51,7 @@ func (c *Create) Run(ctx context.Context, clusterSpec *cluster.Spec, validator i
 		AddonManager:   c.addonManager,
 		ClusterSpec:    clusterSpec,
 		Writer:         c.writer,
+		Reader:         c.reader,
 		Validations:    validator,
 	}
 
@@ -68,6 +71,8 @@ type SetAndValidateTask struct{}
 type CreateWorkloadClusterTask struct{}
 
 type InstallEksaComponentsTask struct{}
+
+type InstallEksdComponentsTask struct{}
 
 type InstallAddonManagerTask struct{}
 
@@ -256,6 +261,48 @@ func (s *MoveClusterManagementTask) Run(ctx context.Context, commandContext *tas
 func (s *MoveClusterManagementTask) Name() string {
 	return "capi-management-move"
 }
+
+// InstallEksdComponentsTask implementation
+
+func (s *InstallEksdComponentsTask) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
+	if !commandContext.BootstrapCluster.ExistingManagement {
+		logger.Info("Installing EKS Distro custom components on workload cluster")
+		eksd, err := commandContext.ClusterManager.
+		if err != nil {
+			commandContext.SetError(err)
+			return &CollectDiagnosticsTask{}
+		}
+	}
+
+	logger.Info("Creating EKS-A CRDs instances on workload cluster")
+	datacenterConfig := commandContext.Provider.DatacenterConfig()
+	machineConfigs := commandContext.Provider.MachineConfigs()
+
+	// this disables create-webhook validation during create
+	commandContext.ClusterSpec.PauseReconcile()
+	datacenterConfig.PauseReconcile()
+
+	targetCluster := commandContext.WorkloadCluster
+	if commandContext.BootstrapCluster.ExistingManagement {
+		targetCluster = commandContext.BootstrapCluster
+	}
+	err := commandContext.ClusterManager.CreateEKSAResources(ctx, targetCluster, commandContext.ClusterSpec, datacenterConfig, machineConfigs)
+	if err != nil {
+		commandContext.SetError(err)
+		return &CollectDiagnosticsTask{}
+	}
+	err = commandContext.ClusterManager.ResumeEKSAControllerReconcile(ctx, targetCluster, commandContext.ClusterSpec, commandContext.Provider)
+	if err != nil {
+		commandContext.SetError(err)
+		return &CollectDiagnosticsTask{}
+	}
+	return &InstallAddonManagerTask{}
+}
+
+func (s *InstallEksdComponentsTask) Name() string {
+	return "eksd-components-install"
+}
+
 
 // InstallEksaComponentsTask implementation
 

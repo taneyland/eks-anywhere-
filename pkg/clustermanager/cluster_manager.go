@@ -837,6 +837,10 @@ func (c *ClusterManager) InstallCustomComponents(ctx context.Context, clusterSpe
 	return c.clusterClient.installCustomComponents(ctx, clusterSpec, cluster)
 }
 
+func (c *ClusterManager) InstallEksdComponents(ctx context.Context, clusterSpec *cluster.Spec, cluster *types.Cluster) error {
+	return c.clusterClient.installEksdComponents(ctx, clusterSpec, cluster)
+}
+
 func (c *ClusterManager) CreateEKSAResources(ctx context.Context, cluster *types.Cluster, clusterSpec *cluster.Spec,
 	datacenterConfig providers.DatacenterConfig, machineConfigs []providers.MachineConfig) error {
 	if clusterSpec.Namespace != "" {

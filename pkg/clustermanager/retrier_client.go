@@ -23,19 +23,42 @@ func NewRetrierClient(client *client, retrier *retrier.Retrier) *retrierClient {
 	}
 }
 
+func (c *retrierClient) installEksdComponents(ctx context.Context, clusterSpec *cluster.Spec, cluster *types.Cluster) error {
+	eksd, err := clusterSpec.GetEksdRelease(clusterSpec.VersionsBundle.EksD)
+	if err != nil {
+		return err
+	}
+
+	err = c.Retry(
+		func() error {
+			return c.ApplyKubeSpecFromBytes(ctx, cluster, eksd.Spec.)
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("error applying eks-a components spec: %v", err)
+	}
+
+	return nil
+}
+
 func (c *retrierClient) installCustomComponents(ctx context.Context, clusterSpec *cluster.Spec, cluster *types.Cluster) error {
-	componentsManifest, err := clusterSpec.LoadManifest(clusterSpec.VersionsBundle.Eksa.Components)
+	eksaComponentsManifest, err := clusterSpec.LoadManifest(clusterSpec.VersionsBundle.Eksa.Components)
 	if err != nil {
 		return fmt.Errorf("failed loading manifest for eksa components: %v", err)
 	}
 
 	err = c.Retry(
 		func() error {
-			return c.ApplyKubeSpecFromBytes(ctx, cluster, componentsManifest.Content)
+			return c.ApplyKubeSpecFromBytes(ctx, cluster, eksaComponentsManifest.Content)
 		},
 	)
 	if err != nil {
 		return fmt.Errorf("error applying eks-a components spec: %v", err)
+	}
+
+	eksdComponentsManifest, err := c.installEksdComponents()
+	if err != nil {
+		return fmt.Errorf("failed loading manifest for eksa components: %v", err)
 	}
 
 	// inject proxy env vars the eksa-controller-manager deployment if proxy is configured
