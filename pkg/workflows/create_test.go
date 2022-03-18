@@ -149,6 +149,8 @@ func (c *createTestSetup) expectInstallEksaComponents() {
 
 		c.provider.EXPECT().MachineConfigs().Return(c.machineConfigs),
 
+		c.clusterManager.EXPECT().InstallEksdComponents(c.ctx, c.clusterSpec, c.workloadCluster),
+
 		c.clusterManager.EXPECT().CreateEKSAResources(
 			c.ctx, c.workloadCluster, c.clusterSpec, c.datacenterConfig, c.machineConfigs,
 		),
@@ -165,6 +167,8 @@ func (c *createTestSetup) skipInstallEksaComponents() {
 		c.provider.EXPECT().DatacenterConfig().Return(c.datacenterConfig),
 
 		c.provider.EXPECT().MachineConfigs().Return(c.machineConfigs),
+
+		c.clusterManager.EXPECT().InstallEksdComponents(c.ctx, c.clusterSpec, c.workloadCluster),
 
 		c.clusterManager.EXPECT().CreateEKSAResources(
 			c.ctx, c.bootstrapCluster, c.clusterSpec, c.datacenterConfig, c.machineConfigs,

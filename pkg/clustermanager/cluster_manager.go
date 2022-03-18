@@ -891,9 +891,6 @@ func (c *ClusterManager) CreateEKSAResources(ctx context.Context, cluster *types
 	if err = c.applyResource(ctx, cluster, resourcesSpec); err != nil {
 		return err
 	}
-	if err = c.InstallEksdComponents(ctx, clusterSpec, cluster); err != nil {
-		return err
-	}
 	return c.ApplyBundles(ctx, clusterSpec, cluster)
 }
 

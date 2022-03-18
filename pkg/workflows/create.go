@@ -275,10 +275,18 @@ func (s *InstallEksaComponentsTask) Run(ctx context.Context, commandContext *tas
 	datacenterConfig.PauseReconcile()
 
 	targetCluster := commandContext.WorkloadCluster
+
+	logger.Info("Installing EKS-D components on workload cluster")
+	err := commandContext.ClusterManager.InstallEksdComponents(ctx, commandContext.ClusterSpec, targetCluster)
+	if err != nil {
+		commandContext.SetError(err)
+		return &CollectDiagnosticsTask{}
+	}
+
 	if commandContext.BootstrapCluster.ExistingManagement {
 		targetCluster = commandContext.BootstrapCluster
 	}
-	err := commandContext.ClusterManager.CreateEKSAResources(ctx, targetCluster, commandContext.ClusterSpec, datacenterConfig, machineConfigs)
+	err = commandContext.ClusterManager.CreateEKSAResources(ctx, targetCluster, commandContext.ClusterSpec, datacenterConfig, machineConfigs)
 	if err != nil {
 		commandContext.SetError(err)
 		return &CollectDiagnosticsTask{}
