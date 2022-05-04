@@ -56,8 +56,8 @@ func Build(ctx context.Context, cluster *v1alpha1.Cluster, fluxConfig *v1alpha1.
 		repoUrl = github.RepoUrl(fluxConfig.Spec.Github.Owner, repo)
 	case fluxConfig.Spec.Git != nil:
 		privateKeyFile := os.Getenv(config.EksaGitPrivateKeyTokenEnv)
-		privateKeyPassword := os.Getenv(config.EksaGitPasswordTokenEnv)
-		gitAuth, err = getSshAuthFromPrivateKey(privateKeyFile, privateKeyPassword)
+		privateKeyPassphrase := os.Getenv(config.EksaGitPassphraseTokenEnv)
+		gitAuth, err = getSshAuthFromPrivateKey(privateKeyFile, privateKeyPassphrase)
 		if err != nil {
 			return nil, err
 		}
