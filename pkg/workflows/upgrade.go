@@ -3,9 +3,6 @@ package workflows
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
-
 	"github.com/aws/eks-anywhere/pkg/cluster"
 	"github.com/aws/eks-anywhere/pkg/clustermarshaller"
 	"github.com/aws/eks-anywhere/pkg/filewriter"
@@ -79,88 +76,42 @@ type setupAndValidateTasks struct {
 	writer filewriter.FileWriter
 }
 
-type updateSecrets struct {
-	checkpointInfo CheckpointInfo
-}
+type updateSecrets struct{}
 
-type ensureEtcdCAPIComponentsExistTask struct {
-	checkpointInfo CheckpointInfo
-}
+type ensureEtcdCAPIComponentsExistTask struct{}
 
-type upgradeCoreComponents struct {
-	checkpointInfo CheckpointInfo
-}
+type upgradeCoreComponents struct{}
 
-type upgradeNeeded struct {
-	checkpointInfo CheckpointInfo
-}
+type upgradeNeeded struct{}
 
-type pauseEksaAndFluxReconcile struct {
-	checkpointInfo CheckpointInfo
-}
+type pauseEksaAndFluxReconcile struct{}
 
-type createBootstrapClusterTask struct {
-	checkpointInfo CheckpointInfo
-}
+type createBootstrapClusterTask struct{}
 
-type installCAPITask struct {
-	checkpointInfo CheckpointInfo
-}
+type installCAPITask struct{}
 
-type moveManagementToBootstrapTask struct {
-	checkpointInfo CheckpointInfo
-}
+type moveManagementToBootstrapTask struct{}
 
 type moveManagementToWorkloadTaskAndExit struct {
 	*moveManagementToWorkloadTask
-	checkpointInfo CheckpointInfo
 }
 
-type moveManagementToWorkloadTask struct {
-	checkpointInfo CheckpointInfo
-}
+type moveManagementToWorkloadTask struct{}
 
-type upgradeWorkloadClusterTask struct {
-	checkpointInfo CheckpointInfo
-}
+type upgradeWorkloadClusterTask struct{}
 
 type deleteBootstrapClusterTask struct {
 	*CollectDiagnosticsTask
 }
 
-type updateClusterAndGitResources struct {
-	checkpointInfo CheckpointInfo
-}
+type updateClusterAndGitResources struct{}
 
-type resumeFluxReconcile struct {
-	checkpointInfo CheckpointInfo
-}
+type resumeFluxReconcile struct{}
 
-type writeClusterConfigTask struct {
-	checkpointInfo CheckpointInfo
-}
+type writeClusterConfigTask struct{}
 
 func (s *setupAndValidateTasks) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
 	logger.Info("Performing setup and validations")
-
-	checkpointInfo := newCheckpointInfo(commandContext.ClusterSpec.Cluster.Name)
-	checkpointFileName := filepath.Join(s.writer.Dir(), "generated", checkpointInfo.Filename)
-
-	if _, err := os.Stat(checkpointFileName); err == nil {
-		logger.V(4).Info("File already exists", "file", checkpointFileName)
-
-		checkpointFile := GetCheckpointFile(checkpointFileName)
-		if checkpointFile.CompletedTasks != nil {
-			checkpointInfo.CompletedTasks = checkpointFile.CompletedTasks
-		}
-	}
-
-	if _, ok := checkpointInfo.CompletedTasks[s.Name()]; ok {
-		logger.Info("Setup and validations already completed... Skipping")
-		return &updateSecrets{
-			checkpointInfo: checkpointInfo,
-		}
-	}
 
 	runner := validations.NewRunner()
 	runner.Register(s.validations(ctx, commandContext)...)
@@ -170,11 +121,7 @@ func (s *setupAndValidateTasks) Run(ctx context.Context, commandContext *task.Co
 		commandContext.SetError(err)
 		return nil
 	}
-
-	checkpointInfo.CompletedTasks[s.Name()] = true
-	return &updateSecrets{
-		checkpointInfo: checkpointInfo,
-	}
+	return &updateSecrets{}
 }
 
 func (s *setupAndValidateTasks) validations(ctx context.Context, commandContext *task.CommandContext) []validations.Validation {
@@ -199,22 +146,12 @@ func (s *setupAndValidateTasks) Name() string {
 }
 
 func (s *updateSecrets) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
-	if _, ok := s.checkpointInfo.CompletedTasks[s.Name()]; ok {
-		return &ensureEtcdCAPIComponentsExistTask{
-			checkpointInfo: s.checkpointInfo,
-		}
-	}
-
 	err := commandContext.Provider.UpdateSecrets(ctx, commandContext.ManagementCluster)
 	if err != nil {
 		commandContext.SetError(err)
 		return &CollectDiagnosticsTask{}
 	}
-
-	s.checkpointInfo.CompletedTasks[s.Name()] = true
-	return &ensureEtcdCAPIComponentsExistTask{
-		checkpointInfo: s.checkpointInfo,
-	}
+	return &ensureEtcdCAPIComponentsExistTask{}
 }
 
 func (s *updateSecrets) Name() string {
@@ -222,12 +159,6 @@ func (s *updateSecrets) Name() string {
 }
 
 func (s *ensureEtcdCAPIComponentsExistTask) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
-	if _, ok := s.checkpointInfo.CompletedTasks[s.Name()]; ok {
-		return &upgradeCoreComponents{
-			checkpointInfo: s.checkpointInfo,
-		}
-	}
-
 	logger.Info("Ensuring etcd CAPI providers exist on management cluster before upgrade")
 	currentSpec, err := commandContext.ClusterManager.GetCurrentClusterSpec(ctx, commandContext.ManagementCluster, commandContext.ClusterSpec.Cluster.Name)
 	if err != nil {
@@ -239,11 +170,7 @@ func (s *ensureEtcdCAPIComponentsExistTask) Run(ctx context.Context, commandCont
 		commandContext.SetError(err)
 		return nil
 	}
-
-	s.checkpointInfo.CompletedTasks[s.Name()] = true
-	return &upgradeCoreComponents{
-		checkpointInfo: s.checkpointInfo,
-	}
+	return &upgradeCoreComponents{}
 }
 
 func (s *ensureEtcdCAPIComponentsExistTask) Name() string {
@@ -251,11 +178,6 @@ func (s *ensureEtcdCAPIComponentsExistTask) Name() string {
 }
 
 func (s *upgradeCoreComponents) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
-	if _, ok := s.checkpointInfo.CompletedTasks[s.Name()]; ok {
-		return &upgradeNeeded{
-			checkpointInfo: s.checkpointInfo,
-		}
-	}
 	logger.Info("Upgrading core components")
 
 	changeDiff, err := commandContext.ClusterManager.UpgradeNetworking(ctx, commandContext.WorkloadCluster, commandContext.CurrentClusterSpec, commandContext.ClusterSpec, commandContext.Provider)
@@ -298,11 +220,7 @@ func (s *upgradeCoreComponents) Run(ctx context.Context, commandContext *task.Co
 		return &CollectDiagnosticsTask{}
 	}
 	commandContext.UpgradeChangeDiff.Append(changeDiff)
-
-	s.checkpointInfo.CompletedTasks[s.Name()] = true
-	return &upgradeNeeded{
-		checkpointInfo: s.checkpointInfo,
-	}
+	return &upgradeNeeded{}
 }
 
 func (s *upgradeCoreComponents) Name() string {
@@ -310,12 +228,6 @@ func (s *upgradeCoreComponents) Name() string {
 }
 
 func (s *upgradeNeeded) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
-	if _, ok := s.checkpointInfo.CompletedTasks[s.Name()]; ok {
-		return &pauseEksaAndFluxReconcile{
-			checkpointInfo: s.checkpointInfo,
-		}
-	}
-
 	newSpec := commandContext.ClusterSpec
 
 	if upgradeNeeded, err := commandContext.Provider.UpgradeNeeded(ctx, newSpec, commandContext.CurrentClusterSpec, commandContext.ManagementCluster); err != nil {
@@ -323,9 +235,7 @@ func (s *upgradeNeeded) Run(ctx context.Context, commandContext *task.CommandCon
 		return nil
 	} else if upgradeNeeded {
 		logger.V(3).Info("Provider needs a cluster upgrade")
-		return &pauseEksaAndFluxReconcile{
-			checkpointInfo: s.checkpointInfo,
-		}
+		return &pauseEksaAndFluxReconcile{}
 	}
 	diff, err := commandContext.ClusterManager.EKSAClusterSpecChanged(ctx, commandContext.ManagementCluster, newSpec)
 	if err != nil {
@@ -337,11 +247,7 @@ func (s *upgradeNeeded) Run(ctx context.Context, commandContext *task.CommandCon
 		logger.Info("No upgrades needed from cluster spec")
 		return nil
 	}
-
-	s.checkpointInfo.CompletedTasks[s.Name()] = true
-	return &pauseEksaAndFluxReconcile{
-		checkpointInfo: s.checkpointInfo,
-	}
+	return &pauseEksaAndFluxReconcile{}
 }
 
 func (s *upgradeNeeded) Name() string {
@@ -349,12 +255,6 @@ func (s *upgradeNeeded) Name() string {
 }
 
 func (s *pauseEksaAndFluxReconcile) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
-	if _, ok := s.checkpointInfo.CompletedTasks[s.Name()]; ok {
-		return &createBootstrapClusterTask{
-			checkpointInfo: s.checkpointInfo,
-		}
-	}
-
 	logger.Info("Pausing EKS-A cluster controller reconcile")
 	err := commandContext.ClusterManager.PauseEKSAControllerReconcile(ctx, commandContext.ManagementCluster, commandContext.CurrentClusterSpec, commandContext.Provider)
 	if err != nil {
@@ -368,10 +268,8 @@ func (s *pauseEksaAndFluxReconcile) Run(ctx context.Context, commandContext *tas
 		commandContext.SetError(err)
 		return &CollectDiagnosticsTask{}
 	}
-	s.checkpointInfo.CompletedTasks[s.Name()] = true
-	return &createBootstrapClusterTask{
-		checkpointInfo: s.checkpointInfo,
-	}
+
+	return &createBootstrapClusterTask{}
 }
 
 func (s *pauseEksaAndFluxReconcile) Name() string {
@@ -380,15 +278,7 @@ func (s *pauseEksaAndFluxReconcile) Name() string {
 
 func (s *createBootstrapClusterTask) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
 	if commandContext.ManagementCluster != nil && commandContext.ManagementCluster.ExistingManagement {
-		return &upgradeWorkloadClusterTask{
-			checkpointInfo: s.checkpointInfo,
-		}
-	}
-
-	if _, ok := s.checkpointInfo.CompletedTasks[s.Name()]; ok {
-		return &installCAPITask{
-			checkpointInfo: s.checkpointInfo,
-		}
+		return &upgradeWorkloadClusterTask{}
 	}
 
 	logger.Info("Creating bootstrap cluster")
@@ -405,10 +295,7 @@ func (s *createBootstrapClusterTask) Run(ctx context.Context, commandContext *ta
 		return &deleteBootstrapClusterTask{}
 	}
 
-	s.checkpointInfo.CompletedTasks[s.Name()] = true
-	return &installCAPITask{
-		checkpointInfo: s.checkpointInfo,
-	}
+	return &installCAPITask{}
 }
 
 func (s *createBootstrapClusterTask) Name() string {
@@ -416,23 +303,13 @@ func (s *createBootstrapClusterTask) Name() string {
 }
 
 func (s *installCAPITask) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
-	if _, ok := s.checkpointInfo.CompletedTasks[s.Name()]; ok {
-		return &moveManagementToBootstrapTask{
-			checkpointInfo: s.checkpointInfo,
-		}
-	}
-
 	logger.Info("Installing cluster-api providers on bootstrap cluster")
 	err := commandContext.ClusterManager.InstallCAPI(ctx, commandContext.ClusterSpec, commandContext.BootstrapCluster, commandContext.Provider)
 	if err != nil {
 		commandContext.SetError(err)
 		return &deleteBootstrapClusterTask{}
 	}
-
-	s.checkpointInfo.CompletedTasks[s.Name()] = true
-	return &moveManagementToBootstrapTask{
-		checkpointInfo: s.checkpointInfo,
-	}
+	return &moveManagementToBootstrapTask{}
 }
 
 func (s *installCAPITask) Name() string {
@@ -440,12 +317,6 @@ func (s *installCAPITask) Name() string {
 }
 
 func (s *moveManagementToBootstrapTask) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
-	if _, ok := s.checkpointInfo.CompletedTasks[s.Name()]; ok {
-		return &upgradeWorkloadClusterTask{
-			checkpointInfo: s.checkpointInfo,
-		}
-	}
-
 	logger.Info("Moving cluster management from workload to bootstrap cluster")
 	err := commandContext.ClusterManager.MoveCAPI(ctx, commandContext.WorkloadCluster, commandContext.BootstrapCluster, commandContext.WorkloadCluster.Name, commandContext.ClusterSpec, types.WithNodeRef(), types.WithNodeHealthy())
 	if err != nil {
@@ -453,11 +324,7 @@ func (s *moveManagementToBootstrapTask) Run(ctx context.Context, commandContext 
 		return &CollectDiagnosticsTask{}
 	}
 	commandContext.ManagementCluster = commandContext.BootstrapCluster
-
-	s.checkpointInfo.CompletedTasks[s.Name()] = true
-	return &upgradeWorkloadClusterTask{
-		checkpointInfo: s.checkpointInfo,
-	}
+	return &upgradeWorkloadClusterTask{}
 }
 
 func (s *moveManagementToBootstrapTask) Name() string {
@@ -477,9 +344,7 @@ func (s *upgradeWorkloadClusterTask) Run(ctx context.Context, commandContext *ta
 		if commandContext.ManagementCluster.ExistingManagement {
 			return &CollectDiagnosticsTask{}
 		}
-		return &moveManagementToWorkloadTaskAndExit{
-			checkpointInfo: s.checkpointInfo,
-		}
+		return &moveManagementToWorkloadTaskAndExit{}
 	}
 
 	if commandContext.UpgradeChangeDiff.Changed() {
@@ -489,10 +354,7 @@ func (s *upgradeWorkloadClusterTask) Run(ctx context.Context, commandContext *ta
 		}
 	}
 
-	s.checkpointInfo.CompletedTasks[s.Name()] = true
-	return &moveManagementToWorkloadTask{
-		checkpointInfo: s.checkpointInfo,
-	}
+	return &moveManagementToWorkloadTask{}
 }
 
 func (s *upgradeWorkloadClusterTask) Name() string {
@@ -510,11 +372,7 @@ func (s *moveManagementToWorkloadTask) Run(ctx context.Context, commandContext *
 		return &CollectDiagnosticsTask{}
 	}
 	commandContext.ManagementCluster = commandContext.WorkloadCluster
-
-	s.checkpointInfo.CompletedTasks[s.Name()] = true
-	return &updateClusterAndGitResources{
-		checkpointInfo: s.checkpointInfo,
-	}
+	return &updateClusterAndGitResources{}
 }
 
 func (s *moveManagementToWorkloadTaskAndExit) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
@@ -554,11 +412,7 @@ func (s *updateClusterAndGitResources) Run(ctx context.Context, commandContext *
 		commandContext.SetError(err)
 		return &CollectDiagnosticsTask{}
 	}
-
-	s.checkpointInfo.CompletedTasks[s.Name()] = true
-	return &resumeFluxReconcile{
-		checkpointInfo: s.checkpointInfo,
-	}
+	return &resumeFluxReconcile{}
 }
 
 func (s *updateClusterAndGitResources) Name() string {
@@ -577,15 +431,9 @@ func (s *resumeFluxReconcile) Run(ctx context.Context, commandContext *task.Comm
 	err = commandContext.AddonManager.ResumeGitOpsKustomization(ctx, commandContext.ManagementCluster, commandContext.ClusterSpec)
 	if err != nil {
 		commandContext.SetError(err)
-		return &writeClusterConfigTask{
-			checkpointInfo: s.checkpointInfo,
-		}
+		return &writeClusterConfigTask{}
 	}
-
-	s.checkpointInfo.CompletedTasks[s.Name()] = true
-	return &writeClusterConfigTask{
-		checkpointInfo: s.checkpointInfo,
-	}
+	return &writeClusterConfigTask{}
 }
 
 func (s *resumeFluxReconcile) Name() string {
@@ -598,8 +446,6 @@ func (s *writeClusterConfigTask) Run(ctx context.Context, commandContext *task.C
 	if err != nil {
 		commandContext.SetError(err)
 	}
-
-	s.checkpointInfo.CompletedTasks[s.Name()] = true
 	return &deleteBootstrapClusterTask{}
 }
 

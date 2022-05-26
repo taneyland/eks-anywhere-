@@ -2,6 +2,11 @@ package task
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"sigs.k8s.io/yaml"
 	"time"
 
 	"github.com/aws/eks-anywhere/pkg/cluster"
@@ -100,7 +105,9 @@ func (pp *Profiler) logProfileSummary(taskName string) {
 
 // Manages Task execution
 type taskRunner struct {
-	task Task
+	checkpointInfo CheckpointInfo
+	writer         filewriter.FileWriter
+	task           Task
 }
 
 // executes Task
@@ -112,13 +119,36 @@ func (pr *taskRunner) RunTask(ctx context.Context, commandContext *CommandContex
 	task := pr.task
 	start := time.Now()
 	defer taskRunnerFinalBlock(start)
+
+	checkpointInfo := newCheckpointInfo(commandContext.ClusterSpec.Cluster.Name)
+	checkpointFileName := filepath.Join(pr.writer.Dir(), "generated", checkpointInfo.Filename)
+
+	if _, err := os.Stat(checkpointFileName); err == nil {
+		logger.V(4).Info("File already exists", "file", checkpointFileName)
+
+		checkpointFile := GetCheckpointFile(checkpointFileName)
+		if checkpointFile.CompletedTasks != nil {
+			checkpointInfo.CompletedTasks = checkpointFile.CompletedTasks
+		}
+	}
+
 	for task != nil {
+		if _, ok := checkpointInfo.CompletedTasks[task.Name()]; ok {
+			task = checkpointInfo.CompletedTasks[task.Name()].nextTask
+			continue
+		}
 		logger.V(4).Info("Task start", "task_name", task.Name())
 		commandContext.Profiler.SetStartTask(task.Name())
 		nextTask := task.Run(ctx, commandContext)
 		commandContext.Profiler.MarkDoneTask(task.Name())
 		commandContext.Profiler.logProfileSummary(task.Name())
+		if commandContext.OriginalError == nil {
+			checkpointInfo.taskCompleted(task.Name(), nextTask)
+		}
 		task = nextTask
+	}
+	if commandContext.OriginalError != nil {
+		pr.saveCheckpoint(checkpointInfo)
 	}
 	return commandContext.OriginalError
 }
@@ -131,4 +161,53 @@ func NewTaskRunner(task Task) *taskRunner {
 	return &taskRunner{
 		task: task,
 	}
+}
+
+func (pr *taskRunner) saveCheckpoint(checkpointInfo CheckpointInfo) {
+	log.Printf("Saving checkpoint:\n%v\n", checkpointInfo)
+	content, err := yaml.Marshal(checkpointInfo)
+	if err != nil {
+		log.Printf("failed saving task runner checkpoint: %v\n", err)
+	}
+
+	if _, err = pr.writer.Write(checkpointInfo.Filename, content); err != nil {
+		log.Printf("failed saving task runner checkpoint: %v\n", err)
+	}
+}
+
+type CheckpointInfo struct {
+	Filename       string
+	CompletedTasks map[string]*CompleteTasksInfo `json:"completedTasks"`
+}
+
+func newCheckpointInfo(clusterName string) CheckpointInfo {
+	return CheckpointInfo{
+		Filename:       fmt.Sprintf("%s-checkpoint.yaml", clusterName),
+		CompletedTasks: map[string]*CompleteTasksInfo{},
+	}
+}
+
+func (c CheckpointInfo) taskCompleted(name string, task Task) {
+	c.CompletedTasks[name].completed = true
+	c.CompletedTasks[name].nextTask = task
+}
+
+type CompleteTasksInfo struct {
+	completed bool
+	nextTask  Task
+}
+
+func GetCheckpointFile(file string) *CheckpointInfo {
+	logger.Info("Reading checkpoint", "file", file)
+	content, err := os.ReadFile(file)
+	if err != nil {
+		log.Printf("failed reading checkpoint file: %v\n", err)
+	}
+	checkpointInfo := &CheckpointInfo{}
+	err = yaml.Unmarshal(content, checkpointInfo)
+	if err != nil {
+		log.Printf("failed unmarshalling checkpoint: %v\n", err)
+	}
+
+	return checkpointInfo
 }
