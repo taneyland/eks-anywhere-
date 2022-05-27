@@ -51,22 +51,64 @@ func (c *Delete) Run(ctx context.Context, workloadCluster *types.Cluster, cluste
 		commandContext.BootstrapCluster = clusterSpec.ManagementCluster
 	}
 
-	return task.NewTaskRunner(&setupAndValidate{}).RunTask(ctx, commandContext)
+	return task.NewTaskRunner(&setupAndValidate{}, nil).RunTask(ctx, commandContext)
 }
 
 type setupAndValidate struct{}
 
+func (s *setupAndValidate) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{
+		NextTask: nextTask,
+	}
+}
+
 type createManagementCluster struct{}
+
+func (s *createManagementCluster) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{
+		NextTask: nextTask,
+	}
+}
 
 type installCAPI struct{}
 
+func (s *installCAPI) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{
+		NextTask: nextTask,
+	}
+}
+
 type moveClusterManagement struct{}
+
+func (s *moveClusterManagement) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{
+		NextTask: nextTask,
+	}
+}
 
 type deleteWorkloadCluster struct{}
 
+func (s *deleteWorkloadCluster) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{
+		NextTask: nextTask,
+	}
+}
+
 type cleanupGitRepo struct{}
 
+func (s *cleanupGitRepo) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{
+		NextTask: nextTask,
+	}
+}
+
 type deleteManagementCluster struct{}
+
+func (s *deleteManagementCluster) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{
+		NextTask: nextTask,
+	}
+}
 
 func (s *setupAndValidate) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
 	logger.Info("Performing provider setup and validations")

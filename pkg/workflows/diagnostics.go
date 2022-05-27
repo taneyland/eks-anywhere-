@@ -12,9 +12,19 @@ type CollectDiagnosticsTask struct {
 	*CollectMgmtClusterDiagnosticsTask
 }
 
+func (s *CollectDiagnosticsTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{}
+}
+
 type CollectWorkloadClusterDiagnosticsTask struct{}
 
 type CollectMgmtClusterDiagnosticsTask struct{}
+
+func (s *CollectMgmtClusterDiagnosticsTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{
+		NextTask: nextTask,
+	}
+}
 
 // CollectDiagnosticsTask implementation
 

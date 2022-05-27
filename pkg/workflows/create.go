@@ -62,7 +62,7 @@ func (c *Create) Run(ctx context.Context, clusterSpec *cluster.Spec, validator i
 		commandContext.BootstrapCluster = clusterSpec.ManagementCluster
 	}
 
-	err := task.NewTaskRunner(&SetAndValidateTask{}).RunTask(ctx, commandContext)
+	err := task.NewTaskRunner(&SetAndValidateTask{}, c.writer).RunTask(ctx, commandContext)
 	if err != nil {
 		return err
 	}
@@ -78,19 +78,67 @@ func (c *Create) Run(ctx context.Context, clusterSpec *cluster.Spec, validator i
 
 type CreateBootStrapClusterTask struct{}
 
+func (s *CreateBootStrapClusterTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{
+		NextTask: nextTask,
+	}
+}
+
 type SetAndValidateTask struct{}
+
+func (s *SetAndValidateTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{
+		NextTask: nextTask,
+	}
+}
 
 type CreateWorkloadClusterTask struct{}
 
+func (s *CreateWorkloadClusterTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{
+		NextTask: nextTask,
+	}
+}
+
 type InstallResourcesOnManagementTask struct{}
+
+func (s *InstallResourcesOnManagementTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{
+		NextTask: nextTask,
+	}
+}
 
 type InstallEksaComponentsTask struct{}
 
+func (s *InstallEksaComponentsTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{
+		NextTask: nextTask,
+	}
+}
+
 type InstallAddonManagerTask struct{}
+
+func (s *InstallAddonManagerTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{
+		NextTask: nextTask,
+	}
+}
 
 type MoveClusterManagementTask struct{}
 
+func (s *MoveClusterManagementTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{
+		NextTask: nextTask,
+	}
+}
+
 type WriteClusterConfigTask struct{}
+
+func (s *WriteClusterConfigTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
+	return task.TaskCheckpoint{
+		NextTask: nextTask,
+	}
+}
 
 type DeleteBootstrapClusterTask struct {
 	*CollectDiagnosticsTask
