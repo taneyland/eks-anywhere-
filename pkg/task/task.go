@@ -182,27 +182,22 @@ type TaskCheckpoint struct {
 }
 
 type CheckpointInfo struct {
-	Filename       string
-	CompletedTasks map[string]*TaskCheckpoint `json:"completedTasks"`
+	Filename       string                    `json:"filename"`
+	CompletedTasks map[string]TaskCheckpoint `json:"completedTasks"`
 }
 
 func newCheckpointInfo(clusterName string) CheckpointInfo {
 	return CheckpointInfo{
 		Filename:       fmt.Sprintf("%s-checkpoint.yaml", clusterName),
-		CompletedTasks: make(map[string]*TaskCheckpoint),
+		CompletedTasks: make(map[string]TaskCheckpoint),
 	}
 }
 
-func (c CheckpointInfo) taskCompleted(name string, checkpoint TaskCheckpoint) {
-	c.CompletedTasks[name] = &checkpoint
+func (c CheckpointInfo) taskCompleted(name string, info TaskCheckpoint) {
+	c.CompletedTasks[name] = info
 }
 
-type CompleteTasksInfo struct {
-	completed bool
-	NextTask  *Task
-}
-
-func GetCheckpointFile(file string) *CheckpointInfo {
+func GetCheckpointFile(file string) CheckpointInfo {
 	logger.Info("Reading checkpoint", "file", file)
 	content, err := os.ReadFile(file)
 	if err != nil {
@@ -214,5 +209,5 @@ func GetCheckpointFile(file string) *CheckpointInfo {
 		log.Printf("failed unmarshalling checkpoint: %v\n", err)
 	}
 
-	return checkpointInfo
+	return *checkpointInfo
 }

@@ -2,6 +2,7 @@ package workflows
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/aws/eks-anywhere/pkg/cluster"
 	"github.com/aws/eks-anywhere/pkg/clustermarshaller"
@@ -12,6 +13,7 @@ import (
 	"github.com/aws/eks-anywhere/pkg/types"
 	"github.com/aws/eks-anywhere/pkg/validations"
 	"github.com/aws/eks-anywhere/pkg/workflows/interfaces"
+	"os"
 )
 
 type Upgrade struct {
@@ -162,6 +164,11 @@ func (s *updateSecrets) Run(ctx context.Context, commandContext *task.CommandCon
 	if err != nil {
 		commandContext.SetError(err)
 		return &CollectDiagnosticsTask{}
+	}
+	// fake error
+	if os.Getenv("FAKE_ERROR") == "true" {
+		commandContext.SetError(errors.New("fake error in upgrade"))
+		return nil
 	}
 	return &ensureEtcdCAPIComponentsExistTask{}
 }
@@ -399,6 +406,12 @@ func (s *upgradeWorkloadClusterTask) Run(ctx context.Context, commandContext *ta
 			return &CollectDiagnosticsTask{}
 		}
 		return &moveManagementToWorkloadTaskAndExit{}
+	}
+
+	// fake error
+	if os.Getenv("FAKE_ERROR") == "true" {
+		commandContext.SetError(errors.New("fake error in upgrade"))
+		return nil
 	}
 
 	if commandContext.UpgradeChangeDiff.Changed() {
