@@ -12,8 +12,8 @@ type CollectDiagnosticsTask struct {
 	*CollectMgmtClusterDiagnosticsTask
 }
 
-func (s *CollectDiagnosticsTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *CollectDiagnosticsTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 func (s *CollectDiagnosticsTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
@@ -28,8 +28,8 @@ func (s *CollectMgmtClusterDiagnosticsTask) NextTaskAfterSuccess(commandContext 
 	return nil
 }
 
-func (s *CollectMgmtClusterDiagnosticsTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *CollectMgmtClusterDiagnosticsTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 // CollectDiagnosticsTask implementation

@@ -21,7 +21,7 @@ import (
 type Task interface {
 	Run(ctx context.Context, commandContext *CommandContext) Task
 	Name() string
-	Checkpoint(nextTask Task) TaskCheckpoint
+	Checkpoint(ctx context.Context, commandContext *CommandContext) TaskCheckpoint
 	NextTaskAfterSuccess(commandContext *CommandContext) Task
 }
 
@@ -141,6 +141,7 @@ func (pr *taskRunner) RunTask(ctx context.Context, commandContext *CommandContex
 
 	for task != nil {
 		if _, ok := checkpointInfo.CompletedTasks[task.Name()]; ok {
+			task.Checkpoint(ctx, commandContext)
 			task = task.NextTaskAfterSuccess(commandContext)
 			continue
 		}
@@ -150,7 +151,7 @@ func (pr *taskRunner) RunTask(ctx context.Context, commandContext *CommandContex
 		commandContext.Profiler.MarkDoneTask(task.Name())
 		commandContext.Profiler.logProfileSummary(task.Name())
 		if commandContext.OriginalError == nil {
-			checkpointInfo.taskCompleted(task.Name(), task.Checkpoint(nextTask))
+			checkpointInfo.taskCompleted(task.Name(), task.Checkpoint(ctx, commandContext))
 		}
 		task = nextTask
 	}
@@ -183,7 +184,7 @@ func (pr *taskRunner) saveCheckpoint(checkpointInfo CheckpointInfo, filename str
 	}
 }
 
-type TaskCheckpoint struct{}
+type TaskCheckpoint interface{}
 
 type CheckpointInfo struct {
 	CompletedTasks map[string]*TaskCheckpoint `json:"completedTasks"`

@@ -60,8 +60,8 @@ func (s *setupAndValidate) NextTaskAfterSuccess(commandContext *task.CommandCont
 	return nil
 }
 
-func (s *setupAndValidate) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *setupAndValidate) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 type createManagementCluster struct{}
@@ -70,8 +70,8 @@ func (s *createManagementCluster) NextTaskAfterSuccess(commandContext *task.Comm
 	return nil
 }
 
-func (s *createManagementCluster) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *createManagementCluster) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 type installCAPI struct{}
@@ -80,8 +80,8 @@ func (s *installCAPI) NextTaskAfterSuccess(commandContext *task.CommandContext) 
 	return nil
 }
 
-func (s *installCAPI) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *installCAPI) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 type moveClusterManagement struct{}
@@ -90,8 +90,8 @@ func (s *moveClusterManagement) NextTaskAfterSuccess(commandContext *task.Comman
 	return nil
 }
 
-func (s *moveClusterManagement) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *moveClusterManagement) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 type deleteWorkloadCluster struct{}
@@ -100,8 +100,8 @@ func (s *deleteWorkloadCluster) NextTaskAfterSuccess(commandContext *task.Comman
 	return nil
 }
 
-func (s *deleteWorkloadCluster) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *deleteWorkloadCluster) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 type cleanupGitRepo struct{}
@@ -110,8 +110,8 @@ func (s *cleanupGitRepo) NextTaskAfterSuccess(commandContext *task.CommandContex
 	return nil
 }
 
-func (s *cleanupGitRepo) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *cleanupGitRepo) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 type deleteManagementCluster struct{}
@@ -120,8 +120,8 @@ func (s *deleteManagementCluster) NextTaskAfterSuccess(commandContext *task.Comm
 	return nil
 }
 
-func (s *deleteManagementCluster) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *deleteManagementCluster) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 func (s *setupAndValidate) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {

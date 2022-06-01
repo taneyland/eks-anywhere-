@@ -120,6 +120,8 @@ func (u *Upgrader) waitForCilium(ctx context.Context, cluster *types.Cluster) er
 }
 
 func ciliumChangeDiff(currentSpec, newSpec *cluster.Spec) *types.ChangeDiff {
+	fmt.Println(currentSpec)
+	fmt.Println(newSpec)
 	if currentSpec.VersionsBundle.Cilium.Version == newSpec.VersionsBundle.Cilium.Version {
 		return nil
 	}

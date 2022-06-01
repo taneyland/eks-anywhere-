@@ -82,14 +82,14 @@ func (s *CreateBootStrapClusterTask) NextTaskAfterSuccess(commandContext *task.C
 	return nil
 }
 
-func (s *CreateBootStrapClusterTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *CreateBootStrapClusterTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 type SetAndValidateTask struct{}
 
-func (s *SetAndValidateTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *SetAndValidateTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 func (s *SetAndValidateTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
@@ -98,8 +98,8 @@ func (s *SetAndValidateTask) NextTaskAfterSuccess(commandContext *task.CommandCo
 
 type CreateWorkloadClusterTask struct{}
 
-func (s *CreateWorkloadClusterTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *CreateWorkloadClusterTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 func (s *CreateWorkloadClusterTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
@@ -112,14 +112,14 @@ func (s *InstallResourcesOnManagementTask) NextTaskAfterSuccess(commandContext *
 	return nil
 }
 
-func (s *InstallResourcesOnManagementTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *InstallResourcesOnManagementTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 type InstallEksaComponentsTask struct{}
 
-func (s *InstallEksaComponentsTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *InstallEksaComponentsTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 func (s *InstallEksaComponentsTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
@@ -128,8 +128,8 @@ func (s *InstallEksaComponentsTask) NextTaskAfterSuccess(commandContext *task.Co
 
 type InstallAddonManagerTask struct{}
 
-func (s *InstallAddonManagerTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *InstallAddonManagerTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 func (s *InstallAddonManagerTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
@@ -138,8 +138,8 @@ func (s *InstallAddonManagerTask) NextTaskAfterSuccess(commandContext *task.Comm
 
 type MoveClusterManagementTask struct{}
 
-func (s *MoveClusterManagementTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *MoveClusterManagementTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 func (s *MoveClusterManagementTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
@@ -148,8 +148,8 @@ func (s *MoveClusterManagementTask) NextTaskAfterSuccess(commandContext *task.Co
 
 type WriteClusterConfigTask struct{}
 
-func (s *WriteClusterConfigTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{}
+func (s *WriteClusterConfigTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+	return nil
 }
 
 func (s *WriteClusterConfigTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
