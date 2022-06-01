@@ -16,14 +16,20 @@ func (s *CollectDiagnosticsTask) Checkpoint(nextTask task.Task) task.TaskCheckpo
 	return task.TaskCheckpoint{}
 }
 
+func (s *CollectDiagnosticsTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return nil
+}
+
 type CollectWorkloadClusterDiagnosticsTask struct{}
 
 type CollectMgmtClusterDiagnosticsTask struct{}
 
+func (s *CollectMgmtClusterDiagnosticsTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return nil
+}
+
 func (s *CollectMgmtClusterDiagnosticsTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
 }
 
 // CollectDiagnosticsTask implementation

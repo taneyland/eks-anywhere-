@@ -95,9 +95,7 @@ type installCAPITask struct{}
 type moveManagementToBootstrapTask struct{}
 
 func (s *moveManagementToBootstrapTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
 }
 
 type moveManagementToWorkloadTaskAndExit struct {
@@ -154,9 +152,11 @@ func (s *setupAndValidateTasks) Name() string {
 }
 
 func (s *setupAndValidateTasks) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
+}
+
+func (s *setupAndValidateTasks) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return &updateSecrets{}
 }
 
 func (s *updateSecrets) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
@@ -166,8 +166,8 @@ func (s *updateSecrets) Run(ctx context.Context, commandContext *task.CommandCon
 		return &CollectDiagnosticsTask{}
 	}
 	// fake error
-	if os.Getenv("FAKE_ERROR") == "true" {
-		commandContext.SetError(errors.New("fake error in upgrade"))
+	if os.Getenv("FAKE_ERROR1") == "true" {
+		commandContext.SetError(errors.New("fake error 1 in upgrade"))
 		return nil
 	}
 	return &ensureEtcdCAPIComponentsExistTask{}
@@ -178,9 +178,11 @@ func (s *updateSecrets) Name() string {
 }
 
 func (s *updateSecrets) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
+}
+
+func (s *updateSecrets) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return &ensureEtcdCAPIComponentsExistTask{}
 }
 
 func (s *ensureEtcdCAPIComponentsExistTask) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
@@ -195,6 +197,11 @@ func (s *ensureEtcdCAPIComponentsExistTask) Run(ctx context.Context, commandCont
 		commandContext.SetError(err)
 		return nil
 	}
+	// fake error
+	if os.Getenv("FAKE_ERROR2") == "true" {
+		commandContext.SetError(errors.New("fake error 2 in upgrade"))
+		return nil
+	}
 	return &upgradeCoreComponents{}
 }
 
@@ -203,9 +210,11 @@ func (s *ensureEtcdCAPIComponentsExistTask) Name() string {
 }
 
 func (s *ensureEtcdCAPIComponentsExistTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
+}
+
+func (s *ensureEtcdCAPIComponentsExistTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return &upgradeCoreComponents{}
 }
 
 func (s *upgradeCoreComponents) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
@@ -259,9 +268,11 @@ func (s *upgradeCoreComponents) Name() string {
 }
 
 func (s *upgradeCoreComponents) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
+}
+
+func (s *upgradeCoreComponents) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return &upgradeNeeded{}
 }
 
 func (s *upgradeNeeded) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
@@ -292,9 +303,11 @@ func (s *upgradeNeeded) Name() string {
 }
 
 func (s *upgradeNeeded) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
+}
+
+func (s *upgradeNeeded) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return &pauseEksaAndFluxReconcile{}
 }
 
 func (s *pauseEksaAndFluxReconcile) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
@@ -320,9 +333,11 @@ func (s *pauseEksaAndFluxReconcile) Name() string {
 }
 
 func (s *pauseEksaAndFluxReconcile) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
+}
+
+func (s *pauseEksaAndFluxReconcile) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return &createBootstrapClusterTask{}
 }
 
 func (s *createBootstrapClusterTask) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
@@ -347,14 +362,19 @@ func (s *createBootstrapClusterTask) Run(ctx context.Context, commandContext *ta
 	return &installCAPITask{}
 }
 
+func (s *createBootstrapClusterTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	if commandContext.ManagementCluster != nil && commandContext.ManagementCluster.ExistingManagement {
+		return &upgradeWorkloadClusterTask{}
+	}
+	return &installCAPITask{}
+}
+
 func (s *createBootstrapClusterTask) Name() string {
 	return "bootstrap-cluster-init"
 }
 
 func (s *createBootstrapClusterTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
 }
 
 func (s *installCAPITask) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
@@ -372,9 +392,11 @@ func (s *installCAPITask) Name() string {
 }
 
 func (s *installCAPITask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
+}
+
+func (s *installCAPITask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return &moveManagementToBootstrapTask{}
 }
 
 func (s *moveManagementToBootstrapTask) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
@@ -390,6 +412,10 @@ func (s *moveManagementToBootstrapTask) Run(ctx context.Context, commandContext 
 
 func (s *moveManagementToBootstrapTask) Name() string {
 	return "capi-management-move-to-bootstrap"
+}
+
+func (s *moveManagementToBootstrapTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return &upgradeWorkloadClusterTask{}
 }
 
 func (s *upgradeWorkloadClusterTask) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
@@ -429,9 +455,11 @@ func (s *upgradeWorkloadClusterTask) Name() string {
 }
 
 func (s *upgradeWorkloadClusterTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
+}
+
+func (s *upgradeWorkloadClusterTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return nil
 }
 
 func (s *moveManagementToWorkloadTask) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
@@ -458,9 +486,11 @@ func (s *moveManagementToWorkloadTask) Name() string {
 }
 
 func (s *moveManagementToWorkloadTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
+}
+
+func (s *moveManagementToWorkloadTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return &updateClusterAndGitResources{}
 }
 
 func (s *updateClusterAndGitResources) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
@@ -499,9 +529,11 @@ func (s *updateClusterAndGitResources) Name() string {
 }
 
 func (s *updateClusterAndGitResources) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
+}
+
+func (s *updateClusterAndGitResources) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return &resumeFluxReconcile{}
 }
 
 func (s *resumeFluxReconcile) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
@@ -526,9 +558,11 @@ func (s *resumeFluxReconcile) Name() string {
 }
 
 func (s *resumeFluxReconcile) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
+}
+
+func (s *resumeFluxReconcile) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return &writeClusterConfigTask{}
 }
 
 func (s *writeClusterConfigTask) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
@@ -541,13 +575,15 @@ func (s *writeClusterConfigTask) Run(ctx context.Context, commandContext *task.C
 }
 
 func (s *writeClusterConfigTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
 }
 
 func (s *writeClusterConfigTask) Name() string {
 	return "write-cluster-config"
+}
+
+func (s *writeClusterConfigTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return &deleteBootstrapClusterTask{}
 }
 
 func (s *deleteBootstrapClusterTask) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {
@@ -578,7 +614,5 @@ func (s *deleteBootstrapClusterTask) Name() string {
 }
 
 func (s *deleteBootstrapClusterTask) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
 }

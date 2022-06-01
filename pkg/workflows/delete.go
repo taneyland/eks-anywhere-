@@ -56,58 +56,72 @@ func (c *Delete) Run(ctx context.Context, workloadCluster *types.Cluster, cluste
 
 type setupAndValidate struct{}
 
+func (s *setupAndValidate) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return nil
+}
+
 func (s *setupAndValidate) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
 }
 
 type createManagementCluster struct{}
 
+func (s *createManagementCluster) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return nil
+}
+
 func (s *createManagementCluster) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
 }
 
 type installCAPI struct{}
 
+func (s *installCAPI) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return nil
+}
+
 func (s *installCAPI) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
 }
 
 type moveClusterManagement struct{}
 
+func (s *moveClusterManagement) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return nil
+}
+
 func (s *moveClusterManagement) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
 }
 
 type deleteWorkloadCluster struct{}
 
+func (s *deleteWorkloadCluster) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return nil
+}
+
 func (s *deleteWorkloadCluster) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
 }
 
 type cleanupGitRepo struct{}
 
+func (s *cleanupGitRepo) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return nil
+}
+
 func (s *cleanupGitRepo) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
 }
 
 type deleteManagementCluster struct{}
 
+func (s *deleteManagementCluster) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+	return nil
+}
+
 func (s *deleteManagementCluster) Checkpoint(nextTask task.Task) task.TaskCheckpoint {
-	return task.TaskCheckpoint{
-		NextTask: nextTask,
-	}
+	return task.TaskCheckpoint{}
 }
 
 func (s *setupAndValidate) Run(ctx context.Context, commandContext *task.CommandContext) task.Task {

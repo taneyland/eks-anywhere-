@@ -22,6 +22,7 @@ type Task interface {
 	Run(ctx context.Context, commandContext *CommandContext) Task
 	Name() string
 	Checkpoint(nextTask Task) TaskCheckpoint
+	NextTaskAfterSuccess(commandContext *CommandContext) Task
 }
 
 // Command context maintains the mutable and shared entities
@@ -121,21 +122,26 @@ func (pr *taskRunner) RunTask(ctx context.Context, commandContext *CommandContex
 	start := time.Now()
 	defer taskRunnerFinalBlock(start)
 
-	checkpointInfo := newCheckpointInfo(commandContext.ClusterSpec.Cluster.Name)
-	checkpointFileName := filepath.Join(commandContext.Writer.Dir(), "generated", checkpointInfo.Filename)
+	checkpointInfo := newCheckpointInfo()
 
-	if _, err := os.Stat(checkpointFileName); err == nil {
-		logger.V(4).Info("File already exists", "file", checkpointFileName)
+	checkpointFileName := fmt.Sprintf("%s-checkpoint.yaml", commandContext.ClusterSpec.Cluster.Name)
+	checkpointFilePath := filepath.Join(commandContext.Writer.Dir(), "generated", checkpointFileName)
 
-		checkpointFile := GetCheckpointFile(checkpointFileName)
+	if _, err := os.Stat(checkpointFilePath); err == nil {
+		logger.V(4).Info("File already exists", "file", checkpointFilePath)
+
+		// completed tasks
+		checkpointFile := GetCheckpointFile(checkpointFilePath)
 		if checkpointFile.CompletedTasks != nil {
 			checkpointInfo.CompletedTasks = checkpointFile.CompletedTasks
+		} else {
+			fmt.Println("empty filr")
 		}
 	}
 
 	for task != nil {
 		if _, ok := checkpointInfo.CompletedTasks[task.Name()]; ok {
-			task = checkpointInfo.CompletedTasks[task.Name()].NextTask
+			task = task.NextTaskAfterSuccess(commandContext)
 			continue
 		}
 		logger.V(4).Info("Task start", "task_name", task.Name())
@@ -149,7 +155,7 @@ func (pr *taskRunner) RunTask(ctx context.Context, commandContext *CommandContex
 		task = nextTask
 	}
 	if commandContext.OriginalError != nil {
-		pr.saveCheckpoint(checkpointInfo)
+		pr.saveCheckpoint(checkpointInfo, checkpointFileName)
 	}
 	return commandContext.OriginalError
 }
@@ -165,39 +171,35 @@ func NewTaskRunner(task Task, writer filewriter.FileWriter) *taskRunner {
 	}
 }
 
-func (pr *taskRunner) saveCheckpoint(checkpointInfo CheckpointInfo) {
+func (pr *taskRunner) saveCheckpoint(checkpointInfo CheckpointInfo, filename string) {
 	log.Printf("Saving checkpoint:\n%v\n", checkpointInfo)
 	content, err := yaml.Marshal(checkpointInfo)
 	if err != nil {
 		log.Printf("failed saving task runner checkpoint: %v\n", err)
 	}
 
-	if _, err = pr.writer.Write(checkpointInfo.Filename, content); err != nil {
+	if _, err = pr.writer.Write(filename, content); err != nil {
 		log.Printf("failed saving task runner checkpoint: %v\n", err)
 	}
 }
 
-type TaskCheckpoint struct {
-	NextTask Task
-}
+type TaskCheckpoint struct{}
 
 type CheckpointInfo struct {
-	Filename       string                    `json:"filename"`
-	CompletedTasks map[string]TaskCheckpoint `json:"completedTasks"`
+	CompletedTasks map[string]*TaskCheckpoint `json:"completedTasks"`
 }
 
-func newCheckpointInfo(clusterName string) CheckpointInfo {
+func newCheckpointInfo() CheckpointInfo {
 	return CheckpointInfo{
-		Filename:       fmt.Sprintf("%s-checkpoint.yaml", clusterName),
-		CompletedTasks: make(map[string]TaskCheckpoint),
+		CompletedTasks: make(map[string]*TaskCheckpoint),
 	}
 }
 
 func (c CheckpointInfo) taskCompleted(name string, info TaskCheckpoint) {
-	c.CompletedTasks[name] = info
+	c.CompletedTasks[name] = &info
 }
 
-func GetCheckpointFile(file string) CheckpointInfo {
+func GetCheckpointFile(file string) *CheckpointInfo {
 	logger.Info("Reading checkpoint", "file", file)
 	content, err := os.ReadFile(file)
 	if err != nil {
@@ -209,5 +211,5 @@ func GetCheckpointFile(file string) CheckpointInfo {
 		log.Printf("failed unmarshalling checkpoint: %v\n", err)
 	}
 
-	return *checkpointInfo
+	return checkpointInfo
 }
