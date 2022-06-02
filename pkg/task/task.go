@@ -21,8 +21,9 @@ import (
 type Task interface {
 	Run(ctx context.Context, commandContext *CommandContext) Task
 	Name() string
-	Checkpoint(ctx context.Context, commandContext *CommandContext) TaskCheckpoint
-	NextTaskAfterSuccess(commandContext *CommandContext) Task
+	Checkpoint() TaskCheckpoint
+	NextTask(commandContext *CommandContext) Task
+	Restore(ctx context.Context, commandContext *CommandContext, checkpoint UnmarshallTaskCheckpoint) (TaskCheckpoint, error)
 }
 
 // Command context maintains the mutable and shared entities
@@ -44,6 +45,7 @@ type CommandContext struct {
 	WorkloadCluster    *types.Cluster
 	Profiler           *Profiler
 	OriginalError      error
+	MovedCAPI          bool
 }
 
 func (c *CommandContext) SetError(err error) {
@@ -130,19 +132,18 @@ func (pr *taskRunner) RunTask(ctx context.Context, commandContext *CommandContex
 	if _, err := os.Stat(checkpointFilePath); err == nil {
 		logger.V(4).Info("File already exists", "file", checkpointFilePath)
 
-		// completed tasks
 		checkpointFile := GetCheckpointFile(checkpointFilePath)
 		if checkpointFile.CompletedTasks != nil {
 			checkpointInfo.CompletedTasks = checkpointFile.CompletedTasks
-		} else {
-			fmt.Println("empty filr")
 		}
 	}
 
 	for task != nil {
 		if _, ok := checkpointInfo.CompletedTasks[task.Name()]; ok {
-			task.Checkpoint(ctx, commandContext)
-			task = task.NextTaskAfterSuccess(commandContext)
+			if _, err := task.Restore(ctx, commandContext, newUnmarshallTaskCheckpoint(checkpointInfo.CompletedTasks[task.Name()])); err != nil {
+				return fmt.Errorf("restoring checkpoint info: %v", err)
+			}
+			task = task.NextTask(commandContext)
 			continue
 		}
 		logger.V(4).Info("Task start", "task_name", task.Name())
@@ -151,7 +152,7 @@ func (pr *taskRunner) RunTask(ctx context.Context, commandContext *CommandContex
 		commandContext.Profiler.MarkDoneTask(task.Name())
 		commandContext.Profiler.logProfileSummary(task.Name())
 		if commandContext.OriginalError == nil {
-			checkpointInfo.taskCompleted(task.Name(), task.Checkpoint(ctx, commandContext))
+			checkpointInfo.taskCompleted(task.Name(), task.Checkpoint())
 		}
 		task = nextTask
 	}
@@ -196,8 +197,8 @@ func newCheckpointInfo() CheckpointInfo {
 	}
 }
 
-func (c CheckpointInfo) taskCompleted(name string, info TaskCheckpoint) {
-	c.CompletedTasks[name] = &info
+func (c CheckpointInfo) taskCompleted(name string, checkpoint TaskCheckpoint) {
+	c.CompletedTasks[name] = &checkpoint
 }
 
 func GetCheckpointFile(file string) *CheckpointInfo {
@@ -213,4 +214,18 @@ func GetCheckpointFile(file string) *CheckpointInfo {
 	}
 
 	return checkpointInfo
+}
+
+type UnmarshallTaskCheckpoint func(config interface{}) error
+
+func newUnmarshallTaskCheckpoint(taskCheckpoint TaskCheckpoint) UnmarshallTaskCheckpoint {
+	return func(config interface{}) error {
+		// TODO: inefficient
+		checkpointYaml, err := yaml.Marshal(taskCheckpoint)
+		if err != nil {
+			return nil
+		}
+
+		return yaml.Unmarshal(checkpointYaml, config)
+	}
 }

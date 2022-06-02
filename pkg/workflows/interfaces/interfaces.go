@@ -13,6 +13,7 @@ import (
 type Bootstrapper interface {
 	CreateBootstrapCluster(ctx context.Context, clusterSpec *cluster.Spec, opts ...bootstrapper.BootstrapClusterOption) (*types.Cluster, error)
 	DeleteBootstrapCluster(context.Context, *types.Cluster, bool) error
+	ClusterExists(ctx context.Context, clusterName string) (bool, error)
 }
 
 type ClusterManager interface {

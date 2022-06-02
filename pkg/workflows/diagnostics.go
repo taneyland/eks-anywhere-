@@ -12,11 +12,15 @@ type CollectDiagnosticsTask struct {
 	*CollectMgmtClusterDiagnosticsTask
 }
 
-func (s *CollectDiagnosticsTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *CollectDiagnosticsTask) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return s.Run(ctx, commandContext), nil
+}
+
+func (s *CollectDiagnosticsTask) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 
-func (s *CollectDiagnosticsTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *CollectDiagnosticsTask) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
@@ -24,11 +28,15 @@ type CollectWorkloadClusterDiagnosticsTask struct{}
 
 type CollectMgmtClusterDiagnosticsTask struct{}
 
-func (s *CollectMgmtClusterDiagnosticsTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *CollectMgmtClusterDiagnosticsTask) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return nil, nil
+}
+
+func (s *CollectMgmtClusterDiagnosticsTask) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
-func (s *CollectMgmtClusterDiagnosticsTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *CollectMgmtClusterDiagnosticsTask) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 

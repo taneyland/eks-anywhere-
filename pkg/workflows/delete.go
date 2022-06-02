@@ -56,71 +56,99 @@ func (c *Delete) Run(ctx context.Context, workloadCluster *types.Cluster, cluste
 
 type setupAndValidate struct{}
 
-func (s *setupAndValidate) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *setupAndValidate) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return nil, nil
+}
+
+func (s *setupAndValidate) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
-func (s *setupAndValidate) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *setupAndValidate) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 
 type createManagementCluster struct{}
 
-func (s *createManagementCluster) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *createManagementCluster) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return nil, nil
+}
+
+func (s *createManagementCluster) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
-func (s *createManagementCluster) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *createManagementCluster) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 
 type installCAPI struct{}
 
-func (s *installCAPI) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *installCAPI) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return nil, nil
+}
+
+func (s *installCAPI) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
-func (s *installCAPI) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *installCAPI) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 
 type moveClusterManagement struct{}
 
-func (s *moveClusterManagement) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *moveClusterManagement) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return nil, nil
+}
+
+func (s *moveClusterManagement) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
-func (s *moveClusterManagement) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *moveClusterManagement) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 
 type deleteWorkloadCluster struct{}
 
-func (s *deleteWorkloadCluster) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *deleteWorkloadCluster) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return nil, nil
+}
+
+func (s *deleteWorkloadCluster) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
-func (s *deleteWorkloadCluster) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *deleteWorkloadCluster) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 
 type cleanupGitRepo struct{}
 
-func (s *cleanupGitRepo) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *cleanupGitRepo) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return nil, nil
+}
+
+func (s *cleanupGitRepo) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
-func (s *cleanupGitRepo) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *cleanupGitRepo) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 
 type deleteManagementCluster struct{}
 
-func (s *deleteManagementCluster) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *deleteManagementCluster) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return nil, nil
+}
+
+func (s *deleteManagementCluster) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
-func (s *deleteManagementCluster) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *deleteManagementCluster) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 

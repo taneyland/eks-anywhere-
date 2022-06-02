@@ -91,6 +91,10 @@ func (b *Bootstrapper) DeleteBootstrapCluster(ctx context.Context, cluster *type
 	return b.clusterClient.DeleteBootstrapCluster(ctx, cluster)
 }
 
+func (b *Bootstrapper) ClusterExists(ctx context.Context, clusterName string) (bool, error) {
+	return b.clusterClient.ClusterExists(ctx, clusterName)
+}
+
 func (b *Bootstrapper) managementInCluster(ctx context.Context, cluster *types.Cluster) (*types.CAPICluster, error) {
 	if cluster.KubeconfigFile == "" {
 		kubeconfig, err := b.clusterClient.GetKubeconfig(ctx, cluster.Name)

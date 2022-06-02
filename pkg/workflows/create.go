@@ -78,81 +78,113 @@ func (c *Create) Run(ctx context.Context, clusterSpec *cluster.Spec, validator i
 
 type CreateBootStrapClusterTask struct{}
 
-func (s *CreateBootStrapClusterTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *CreateBootStrapClusterTask) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return nil, nil
+}
+
+func (s *CreateBootStrapClusterTask) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
-func (s *CreateBootStrapClusterTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *CreateBootStrapClusterTask) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 
 type SetAndValidateTask struct{}
 
-func (s *SetAndValidateTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *SetAndValidateTask) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return nil, nil
+}
+
+func (s *SetAndValidateTask) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 
-func (s *SetAndValidateTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *SetAndValidateTask) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
 type CreateWorkloadClusterTask struct{}
 
-func (s *CreateWorkloadClusterTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *CreateWorkloadClusterTask) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return nil, nil
+}
+
+func (s *CreateWorkloadClusterTask) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 
-func (s *CreateWorkloadClusterTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *CreateWorkloadClusterTask) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
 type InstallResourcesOnManagementTask struct{}
 
-func (s *InstallResourcesOnManagementTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *InstallResourcesOnManagementTask) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return nil, nil
+}
+
+func (s *InstallResourcesOnManagementTask) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
-func (s *InstallResourcesOnManagementTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *InstallResourcesOnManagementTask) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 
 type InstallEksaComponentsTask struct{}
 
-func (s *InstallEksaComponentsTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *InstallEksaComponentsTask) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return nil, nil
+}
+
+func (s *InstallEksaComponentsTask) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 
-func (s *InstallEksaComponentsTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *InstallEksaComponentsTask) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
 type InstallAddonManagerTask struct{}
 
-func (s *InstallAddonManagerTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *InstallAddonManagerTask) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return nil, nil
+}
+
+func (s *InstallAddonManagerTask) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 
-func (s *InstallAddonManagerTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *InstallAddonManagerTask) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
 type MoveClusterManagementTask struct{}
 
-func (s *MoveClusterManagementTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *MoveClusterManagementTask) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return nil, nil
+}
+
+func (s *MoveClusterManagementTask) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 
-func (s *MoveClusterManagementTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *MoveClusterManagementTask) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
 type WriteClusterConfigTask struct{}
 
-func (s *WriteClusterConfigTask) Checkpoint(ctx context.Context, commandContext *task.CommandContext) task.TaskCheckpoint {
+func (s *WriteClusterConfigTask) Restore(ctx context.Context, commandContext *task.CommandContext, checkpoint task.UnmarshallTaskCheckpoint) (task.TaskCheckpoint, error) {
+	return nil, nil
+}
+
+func (s *WriteClusterConfigTask) Checkpoint() task.TaskCheckpoint {
 	return nil
 }
 
-func (s *WriteClusterConfigTask) NextTaskAfterSuccess(commandContext *task.CommandContext) task.Task {
+func (s *WriteClusterConfigTask) NextTask(commandContext *task.CommandContext) task.Task {
 	return nil
 }
 
