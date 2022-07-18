@@ -81,7 +81,7 @@ func (p *SnowProvider) SetupAndValidateCreateCluster(ctx context.Context, cluste
 	return nil
 }
 
-func (p *SnowProvider) SetupAndValidateUpgradeCluster(ctx context.Context, cluster *types.Cluster, clusterSpec *cluster.Spec) error {
+func (p *SnowProvider) SetupAndValidateUpgradeCluster(ctx context.Context, cluster *types.Cluster, clusterSpec *cluster.Spec, _ *cluster.Spec) error {
 	if err := p.setupBootstrapCreds(); err != nil {
 		return fmt.Errorf("setting up credentials: %v", err)
 	}
@@ -135,8 +135,8 @@ func (p *SnowProvider) GenerateCAPISpecForCreate(ctx context.Context, cluster *t
 	return p.generateCAPISpec(ctx, cluster, clusterSpec)
 }
 
-func (p *SnowProvider) GenerateCAPISpecForUpgrade(ctx context.Context, _, managementCluster *types.Cluster, _ *cluster.Spec, clusterSpec *cluster.Spec) (controlPlaneSpec, workersSpec []byte, err error) {
-	return p.generateCAPISpec(ctx, managementCluster, clusterSpec)
+func (p *SnowProvider) GenerateCAPISpecForUpgrade(ctx context.Context, bootstrapCluster, _ *types.Cluster, _ *cluster.Spec, clusterSpec *cluster.Spec) (controlPlaneSpec, workersSpec []byte, err error) {
+	return p.generateCAPISpec(ctx, bootstrapCluster, clusterSpec)
 }
 
 func (p *SnowProvider) GenerateStorageClass() []byte {
