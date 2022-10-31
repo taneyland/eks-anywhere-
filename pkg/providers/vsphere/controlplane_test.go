@@ -125,6 +125,38 @@ func TestControlPlaneSpecNoKubeVersion(t *testing.T) {
 	g.Expect(err).To(MatchError(ContainSubstring("generating vsphere control plane yaml spec")))
 }
 
+func TestControlPlaneSpecUpdateMachineTemplates(t *testing.T) {
+	g := NewWithT(t)
+	logger := test.NewNullLogger()
+	ctx := context.Background()
+	spec := givenClusterSpec(t, testClusterConfigMainFilename)
+	originalKubeadmControlPlane := kubeadmControlPlane()
+	originalEtcdCluster := etcdCluster()
+	originalEtcdCluster.Spec.InfrastructureTemplate.Name = "test-etcd-2"
+	client := test.NewFakeKubeClient(
+		originalKubeadmControlPlane,
+		originalEtcdCluster,
+		vsphereMachineTemplate("test-control-plane-1"),
+		vsphereMachineTemplate("test-etcd-2"),
+	)
+
+	kcp := wantKCP()
+	kcp.Spec.MachineTemplate.InfrastructureRef.Name = "test-control-plane-2"
+
+	etcd := wantEtcdCluster()
+	etcd.Spec.InfrastructureTemplate.Name = "test-etcd-3"
+
+	cp, err := vsphere.ControlPlaneSpec(ctx, logger, client, spec)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(cp).NotTo(BeNil())
+	g.Expect(cp.Cluster).To(Equal(capiCluster()))
+	g.Expect(cp.KubeadmControlPlane).To(Equal(kcp))
+	g.Expect(cp.EtcdCluster).To(Equal(etcd))
+	g.Expect(cp.ProviderCluster).To(Equal(vsphereCluster()))
+	g.Expect(cp.ControlPlaneMachineTemplate.Name).To(Equal(cp.KubeadmControlPlane.Spec.MachineTemplate.InfrastructureRef.Name))
+	g.Expect(cp.EtcdMachineTemplate.Name).To(Equal(cp.EtcdCluster.Spec.InfrastructureTemplate.Name))
+}
+
 func givenClusterSpec(t *testing.T, fileName string) *cluster.Spec {
 	return test.NewFullClusterSpec(t, path.Join(testDataDir, fileName))
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	vspherev1 "sigs.k8s.io/cluster-api-provider-vsphere/api/v1beta1"
 	addonsv1 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
 
@@ -81,8 +82,13 @@ func ControlPlaneSpec(ctx context.Context, logger logr.Logger, client kubernetes
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing vsphere control plane yaml")
 	}
+	cp := builder.ControlPlane
 
-	return builder.ControlPlane, nil
+	if err = cp.UpdateImmutableObjectNames(ctx, client, getMachineTemplate, machineTemplateEqual); err != nil {
+		return nil, errors.Wrap(err, "updating vsphere immutable object names")
+	}
+
+	return cp, nil
 }
 
 func newControlPlaneParser(logger logr.Logger) (*yamlutil.Parser, *ControlPlaneBuilder, error) {
@@ -154,4 +160,17 @@ func getConfigMaps(o []kubernetes.Object, configMaps []*corev1.ConfigMap) []kube
 		o = append(o, m)
 	}
 	return o
+}
+
+func getMachineTemplate(ctx context.Context, client kubernetes.Client, name, namespace string) (*vspherev1.VSphereMachineTemplate, error) {
+	m := &vspherev1.VSphereMachineTemplate{}
+	if err := client.Get(ctx, name, namespace, m); err != nil {
+		return nil, errors.Wrap(err, "reading vSphereMachineTemplate")
+	}
+
+	return m, nil
+}
+
+func machineTemplateEqual(new, old *vspherev1.VSphereMachineTemplate) bool {
+	return equality.Semantic.DeepDerivative(new, old)
 }
