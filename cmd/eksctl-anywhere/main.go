@@ -6,17 +6,19 @@ import (
 	"os/signal"
 	"syscall"
 
+	"k8s.io/klog/v2"
+
 	"github.com/aws/eks-anywhere/cmd/eksctl-anywhere/cmd"
 	"github.com/aws/eks-anywhere/pkg/eksctl"
-	"github.com/aws/eks-anywhere/pkg/logger"
 )
 
 func main() {
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, syscall.SIGINT, syscall.SIGTERM)
+
 	go func() {
 		<-sigChannel
-		logger.Info("Warning: Terminating this operation may leave the cluster in an irrecoverable state")
+		klog.Info("Warning: Terminating this operation may leave the cluster in an irrecoverable state")
 		os.Exit(-1)
 	}()
 	if eksctl.Enabled() {
@@ -29,5 +31,6 @@ func main() {
 	if cmd.Execute() == nil {
 		os.Exit(0)
 	}
+
 	os.Exit(-1)
 }

@@ -3,7 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
+	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -23,6 +25,18 @@ func init() {
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Fatalf("failed to bind flags for root: %v", err)
 	}
+	setWriters(rootCmd)
+}
+
+func setWriters(cmd *cobra.Command) {
+	logFile, err := os.OpenFile("log.txt", os.O_CREATE | os.O_APPEND | os.O_RDWR, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+	defer logFile.Close()
+
+	multi := io.MultiWriter(logFile, os.Stdout)
+	cmd.SetOut(multi)
 }
 
 func rootPersistentPreRun(cmd *cobra.Command, args []string) {

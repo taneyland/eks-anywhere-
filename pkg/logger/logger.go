@@ -4,6 +4,8 @@ import (
 	"os"
 	"sync"
 
+	"k8s.io/klog/v2"
+
 	"github.com/go-logr/logr"
 )
 
@@ -16,11 +18,11 @@ const (
 )
 
 var (
-	l    logr.Logger = logr.Discard()
+	l    klog.Logger = logr.Discard()
 	once sync.Once
 )
 
-func set(logger logr.Logger) {
+func set(logger klog.Logger) {
 	once.Do(func() {
 		l = logger
 	})
@@ -28,7 +30,7 @@ func set(logger logr.Logger) {
 
 // Get returns the logger instance that has been previously set.
 // If no logger has been set, it returns a null logger.
-func Get() logr.Logger {
+func Get() klog.Logger {
 	return l
 }
 
@@ -60,7 +62,7 @@ func Info(msg string, keysAndValues ...interface{}) {
 // this Logger. In other words, V values are additive.  V higher verbosity
 // level means a log message is less important.  It's illegal to pass a log
 // level less than zero.
-func V(level int) logr.Logger {
+func V(level int) klog.Logger {
 	return l.V(level)
 }
 
@@ -84,10 +86,10 @@ func MarkWarning(msg string, keysAndValues ...interface{}) {
 	l.V(0).Info(markWarning+msg, keysAndValues...)
 }
 
-type LoggerOpt func(logr *logr.Logger)
+type LoggerOpt func(logr *klog.Logger)
 
 func WithName(name string) LoggerOpt {
-	return func(logr *logr.Logger) {
+	return func(logr *klog.Logger) {
 		*logr = (*logr).WithName(name)
 	}
 }
