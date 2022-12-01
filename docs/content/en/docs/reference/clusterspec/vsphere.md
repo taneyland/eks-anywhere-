@@ -258,6 +258,7 @@ More details on the driver are [here](https://docs.vmware.com/en/VMware-vSphere-
 > * vsphere-csi-controller-role (kind: ClusterRole)
 > * vsphere-csi-controller-binding (kind: ClusterRoleBinding)
 > * csi.vsphere.vmware.com (kind: CSIDriver)
+> * -csi (kind: ClusterResourceSet)
 > 
 > These are the resources you would need to delete
 > in the `kube-system` namespace:
