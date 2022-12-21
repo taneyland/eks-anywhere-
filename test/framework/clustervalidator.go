@@ -3,6 +3,7 @@ package framework
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -11,6 +12,7 @@ import (
 	"sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/aws/eks-anywhere/pkg/api/v1alpha1"
 	"github.com/aws/eks-anywhere/pkg/cluster"
 	"github.com/aws/eks-anywhere/pkg/controller"
 	"github.com/aws/eks-anywhere/pkg/retrier"
@@ -35,11 +37,14 @@ func (c *ClusterValidator) WithValidation(validation clusterValidation, backoffP
 	c.validations = append(c.validations, retriableValidation{validation, backoffPeriod, maxRetries})
 }
 
-// WithWorkloadClusterValidations registers a validation set for a management cluster.
-func (c *ClusterValidator) WithWorkloadClusterValidations() {
+// WithWorkloadClusterValidations registers a validation set for a workload cluster.
+func (c *ClusterValidator) WithWorkloadClusterValidations() {}
+
+func (c *ClusterValidator) baseValidations() {
 	c.WithValidation(validateClusterReady, 5*time.Second, 60)
 	c.WithValidation(validateEKSAObjects, 5*time.Second, 60)
 	c.WithValidation(validateControlPlaneNodes, 5*time.Second, 60)
+	c.WithValidation(validateWorkerNodes, 5*time.Second, 60)
 }
 
 // WithClusterDoesNotExist registers a validation to check that a cluster does not exist or has been deleted.
@@ -75,6 +80,7 @@ func NewClusterValidator(opts ...ClusterValidatorOpts) *ClusterValidator {
 		ClusterOpts: clusterOpts{},
 		validations: []retriableValidation{},
 	}
+	cv.baseValidations()
 
 	for _, opt := range opts {
 		opt(&cv)
@@ -83,9 +89,9 @@ func NewClusterValidator(opts ...ClusterValidatorOpts) *ClusterValidator {
 }
 
 type clusterOpts struct {
-	ClusterClient          client.Client // the client for the cluster
-	ManagmentClusterClient client.Client // the client for the management cluster
-	ClusterSpec            *cluster.Spec // the cluster spec
+	ClusterClient           client.Client // the client for the cluster
+	ManagementClusterClient client.Client // the client for the management cluster
+	ClusterSpec             *cluster.Spec // the cluster spec
 }
 
 func validateEKSAObjects(ctx context.Context, validateOpts clusterOpts) error {
@@ -98,9 +104,14 @@ func validateEKSAObjects(ctx context.Context, validateOpts clusterOpts) error {
 			key.Namespace = "default"
 		}
 
-		err := validateOpts.ManagmentClusterClient.Get(ctx, key, u)
-		if err != nil {
-			return fmt.Errorf("cluster object does not exist %s", err)
+		if validateOpts.ClusterSpec.Cluster.IsManaged() {
+			if err := validateOpts.ManagementClusterClient.Get(ctx, key, u); err != nil {
+				return fmt.Errorf("cluster object does not exist %s", err)
+			}
+		} else {
+			if err := validateOpts.ClusterClient.Get(ctx, key, u); err != nil {
+				return fmt.Errorf("cluster object does not exist %s", err)
+			}
 		}
 	}
 
@@ -108,13 +119,23 @@ func validateEKSAObjects(ctx context.Context, validateOpts clusterOpts) error {
 }
 
 func validateClusterReady(ctx context.Context, validateOpts clusterOpts) error {
-	capiCluster, err := controller.GetCAPICluster(ctx, validateOpts.ManagmentClusterClient, validateOpts.ClusterSpec.Cluster)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve cluster %s", err)
+	var capiCluster *v1beta1.Cluster
+	var err error
+
+	if validateOpts.ClusterSpec.Cluster.IsManaged() {
+		capiCluster, err = controller.GetCAPICluster(ctx, validateOpts.ManagementClusterClient, validateOpts.ClusterSpec.Cluster)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve cluster %s", err)
+		}
+	} else {
+		capiCluster, err = controller.GetCAPICluster(ctx, validateOpts.ClusterClient, validateOpts.ClusterSpec.Cluster)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve cluster %s", err)
+		}
 	}
 
-	if capiCluster == nil && err == nil {
-		return fmt.Errorf("cluster %s does not exist", capiCluster.Name)
+	if capiCluster == nil {
+		return fmt.Errorf("CAPI cluster does not exist")
 	}
 
 	if err := checkClusterReady(capiCluster); err != nil {
@@ -136,7 +157,7 @@ func validateControlPlaneNodes(ctx context.Context, validateOpts clusterOpts) er
 	}
 
 	for _, node := range cpNodes.Items {
-		err := validateNodeReady(node)
+		err := validateNodeReady(node, validateOpts.ClusterSpec.Cluster.Spec.KubernetesVersion)
 		if err != nil {
 			return fmt.Errorf("failed to validate controlplane %s", err)
 		}
@@ -144,18 +165,51 @@ func validateControlPlaneNodes(ctx context.Context, validateOpts clusterOpts) er
 	return nil
 }
 
-func validateNodeReady(node corev1.Node) error {
+func validateWorkerNodes(ctx context.Context, validateOpts clusterOpts) error {
+	var workerNodes []corev1.Node
+	nodes := &corev1.NodeList{}
+	err := validateOpts.ClusterClient.List(ctx, nodes)
+	if err != nil {
+		return fmt.Errorf("failed to list nodes %s", err)
+	}
+	for _, wnConfig := range validateOpts.ClusterSpec.Cluster.Spec.WorkerNodeGroupConfigurations {
+		nodeNamePrefix := fmt.Sprintf("%s-%s", validateOpts.ClusterSpec.Cluster.Name, wnConfig.Name)
+		workerGroupCount := 0
+		for _, n := range nodes.Items {
+			if strings.HasPrefix(n.Name, nodeNamePrefix) {
+				workerGroupCount = workerGroupCount + 1
+				workerNodes = append(workerNodes, n)
+			}
+		}
+		if workerGroupCount != *wnConfig.Count {
+			return fmt.Errorf("worker node count does not match expected: %v of %v", workerGroupCount, wnConfig.Count)
+		}
+	}
+	for _, node := range workerNodes {
+		err := validateNodeReady(node, validateOpts.ClusterSpec.Cluster.Spec.KubernetesVersion)
+		if err != nil {
+			return fmt.Errorf("failed to validate worker node ready %s", err)
+		}
+	}
+	return nil
+}
+
+func validateNodeReady(node corev1.Node, kubeVersion v1alpha1.KubernetesVersion) error {
 	for _, condition := range node.Status.Conditions {
 		if condition.Type == "Ready" && condition.Status != "True" {
 			return fmt.Errorf("node %s not ready yet. %s", node.GetName(), condition.Reason)
 		}
+	}
+	kubeletVersion := node.Status.NodeInfo.KubeletVersion
+	if !strings.Contains(kubeletVersion, string(kubeVersion)) {
+		return fmt.Errorf("validating node version: kubernetes version %s does not match expected version %s", kubeletVersion, kubeVersion)
 	}
 
 	return nil
 }
 
 func validateClusterDoesNotExist(ctx context.Context, validateOpts clusterOpts) error {
-	capiCluster, err := controller.GetCAPICluster(ctx, validateOpts.ManagmentClusterClient, validateOpts.ClusterSpec.Cluster)
+	capiCluster, err := controller.GetCAPICluster(ctx, validateOpts.ManagementClusterClient, validateOpts.ClusterSpec.Cluster)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve cluster %s", err)
 	}

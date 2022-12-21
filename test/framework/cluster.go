@@ -561,7 +561,7 @@ func (e *ClusterE2ETest) parseClusterConfigWithDefaultsFromDisk() (*v1alpha1.Clu
 }
 
 // WithClusterConfig generates a base cluster config using the CLI `generate clusterconfig` command
-// and udpates them with the provided fillers. Helpful for defining the initial Cluster config
+// and updates them with the provided fillers. Helpful for defining the initial Cluster config
 // before running a create operation.
 func (e *ClusterE2ETest) WithClusterConfig(fillers ...api.ClusterConfigFiller) *ClusterE2ETest {
 	e.T.Logf("Generating base config for cluster %s", e.ClusterName)
@@ -661,10 +661,33 @@ func (e *ClusterE2ETest) GetCapiMachinesForCluster(clusterName string) map[strin
 	return machinesMap
 }
 
+// ApplyClusterManifest uses client-side logic to create/update objects defined in a cluster yaml manifest.
+func (e *ClusterE2ETest) ApplyClusterManifest() {
+	ctx := context.Background()
+	e.T.Logf("Applying cluster %s spec located at %s", e.ClusterName, e.ClusterConfigLocation)
+	e.applyClusterManifest(ctx)
+	e.ValidateClusterState()
+	e.StopIfFailed()
+}
+
+func (e *ClusterE2ETest) applyClusterManifest(ctx context.Context) {
+	if err := e.KubectlClient.ApplyManifest(ctx, e.kubeconfigFilePath(), e.ClusterConfigLocation); err != nil {
+		e.T.Fatalf("Failed to apply cluster config: %s", err)
+	}
+}
+
 func WithClusterUpgrade(fillers ...api.ClusterFiller) ClusterE2ETestOpt {
 	return func(e *ClusterE2ETest) {
 		e.UpdateClusterConfig(api.ClusterToConfigFiller(fillers...))
 	}
+}
+
+// UpgradeClusterWithKubectl uses client-side logic to upgrade a cluster.
+func (e *ClusterE2ETest) UpgradeClusterWithKubectl(clusterOpts []ClusterE2ETestOpt) {
+	for _, opt := range clusterOpts {
+		opt(e)
+	}
+	e.ApplyClusterManifest()
 }
 
 func (e *ClusterE2ETest) UpgradeCluster(clusterOpts []ClusterE2ETestOpt, commandOpts ...CommandOpt) {
@@ -1743,7 +1766,7 @@ func (e *ClusterE2ETest) buildClusterValidator(ctx context.Context) error {
 
 	e.clusterValidator = NewClusterValidator(func(cv *ClusterValidator) {
 		cv.ClusterOpts.ClusterClient = c
-		cv.ClusterOpts.ManagmentClusterClient = mc
+		cv.ClusterOpts.ManagementClusterClient = mc
 		cv.ClusterOpts.ClusterSpec = spec
 	})
 
