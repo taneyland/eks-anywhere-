@@ -91,6 +91,31 @@ func TestVSphereKubernetes124BottlerocketUpgradeAndRemoveWorkerNodeGroupsAPI(t *
 	)
 }
 
+func TestDockerKubernetes124UpgradeAndRemoveWorkerNodeGroupsAPI(t *testing.T) {
+	provider := framework.NewDocker(t)
+	test := framework.NewClusterE2ETest(
+		t,
+		provider,
+		framework.WithClusterFiller(
+			api.WithKubernetesVersion(anywherev1.Kube124),
+			api.WithExternalEtcdTopology(1),
+			api.WithControlPlaneCount(1),
+			api.WithWorkerNodeGroup("worker-1",
+				api.WithCount(2)),
+			api.WithWorkerNodeGroup("worker-2",
+				api.WithCount(1)),
+		),
+	)
+
+	runUpgradeFlowWithAPI(
+		test,
+		framework.WithClusterUpgrade(
+			api.RemoveWorkerNodeGroup("worker-2"),
+			api.WithWorkerNodeGroup("worker-1", api.WithCount(1)),
+		),
+	)
+}
+
 func TestCloudStackKubernetes121RedhatAndRemoveWorkerNodeGroups(t *testing.T) {
 	provider := framework.NewCloudStack(t,
 		framework.WithCloudStackWorkerNodeGroup(

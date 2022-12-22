@@ -10,15 +10,29 @@ import (
 // Docker is a Provider for running end-to-end tests.
 type Docker struct {
 	t *testing.T
+	clusterFillers []api.ClusterFiller
 }
 
 const dockerPodCidrVar = "T_DOCKER_POD_CIDR"
 
+// DockerOpt is construction option for the E2E vSphere provider.
+type DockerOpt func(*Docker)
+
 // NewDocker creates a new Docker object implementing the Provider interface
 // for testing.
-func NewDocker(t *testing.T) *Docker {
-	return &Docker{
+func NewDocker(t *testing.T, opts ...DockerOpt) *Docker {
+	d := &Docker{
 		t: t,
+	}
+	for _, opt := range opts {
+		opt(d)
+	}
+	return d
+}
+
+func WithDockerWorkerNodeGroup(workerNodeGroup *WorkerNodeGroup) DockerOpt {
+	return func(d *Docker) {
+		d.clusterFillers = append(d.clusterFillers, workerNodeGroup.ClusterFiller())
 	}
 }
 
