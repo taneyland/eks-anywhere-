@@ -129,17 +129,17 @@ func (md *MachineConfigDefaulters) defaultSSHKeyName(clusterName string) string 
 }
 
 func SetupEksaCredentialsSecret(c *cluster.Config) error {
-	creds, err := aws.EncodeFileFromEnv(eksaSnowCredentialsFileKey)
+	creds, err := aws.GetFileFromEnv(eksaSnowCredentialsFileKey)
 	if err != nil {
 		return fmt.Errorf("setting up snow credentials: %v", err)
 	}
 
-	certs, err := aws.EncodeFileFromEnv(eksaSnowCABundlesFileKey)
+	certs, err := aws.GetFileFromEnv(eksaSnowCABundlesFileKey)
 	if err != nil {
 		return fmt.Errorf("setting up snow certificates: %v", err)
 	}
 
-	c.SnowCredentialsSecret = EksaCredentialsSecret(c.SnowDatacenter, []byte(creds), []byte(certs))
+	c.SnowCredentialsSecret = EksaCredentialsSecret(c.SnowDatacenter, creds, certs)
 
 	return nil
 }

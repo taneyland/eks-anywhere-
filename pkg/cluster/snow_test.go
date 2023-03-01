@@ -463,7 +463,7 @@ func TestSetSnowDatacenterIndentityRefDefault(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
-			cluster.SetSnowDatacenterIndentityRefDefault(tt.before)
+			cluster.SetSnowDatacenterIdentityRefDefault(tt.before)
 			g.Expect(tt.before).To(Equal(tt.after))
 		})
 	}

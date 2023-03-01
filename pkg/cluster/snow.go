@@ -31,7 +31,7 @@ func snowEntry() *ConfigManagerEntry {
 		Defaulters: []Defaulter{
 			func(c *Config) error {
 				if c.SnowDatacenter != nil {
-					SetSnowDatacenterIndentityRefDefault(c.SnowDatacenter)
+					SetSnowDatacenterIdentityRefDefault(c.SnowDatacenter)
 				}
 				return nil
 			},
@@ -257,10 +257,10 @@ func getSnowIdentitySecret(ctx context.Context, client Client, c *Config) error 
 	return nil
 }
 
-// SetSnowDatacenterIndentityRefDefault sets a default secret as the identity reference
+// SetSnowDatacenterIdentityRefDefault sets a default secret as the identity reference
 // The secret will need to be created by the CLI flow as it's not provided by the user
 // This only runs in CLI. snowDatacenterConfig.SetDefaults() will run in both CLI and webhook.
-func SetSnowDatacenterIndentityRefDefault(s *anywherev1.SnowDatacenterConfig) {
+func SetSnowDatacenterIdentityRefDefault(s *anywherev1.SnowDatacenterConfig) {
 	if len(s.Spec.IdentityRef.Kind) == 0 && len(s.Spec.IdentityRef.Name) == 0 {
 		s.Spec.IdentityRef = anywherev1.Ref{
 			Kind: anywherev1.SnowIdentityKind,

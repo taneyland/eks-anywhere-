@@ -39,17 +39,26 @@ func validateFileFromEnv(envKey string) (filePath string, err error) {
 }
 
 func EncodeFileFromEnv(envKey string) (string, error) {
+	content, err := GetFileFromEnv(envKey)
+	if err != nil {
+		return "", fmt.Errorf("unable to get file from env: %v", err)
+	}
+
+	return base64.StdEncoding.EncodeToString(content), nil
+}
+
+func GetFileFromEnv(envKey string) ([]byte, error) {
 	filePath, err := validateFileFromEnv(envKey)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		return "", fmt.Errorf("unable to read file due to: %v", err)
+		return nil, fmt.Errorf("unable to read file due to: %v", err)
 	}
 
-	return base64.StdEncoding.EncodeToString(content), nil
+	return content, nil
 }
 
 func ParseDeviceIPsFromFile(filePath string) ([]string, error) {
