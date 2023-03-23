@@ -632,6 +632,15 @@ func validateCNIConfig(cniConfig *CNIConfig) error {
 	var cniPluginSpecified int
 	var allErrs []error
 
+	fmt.Println(cniConfig.Cilium)
+	fmt.Println(&cniConfig.Cilium.SkipUpgrade)
+
+	if cniConfig.Cilium == nil {
+		fmt.Println("its nil")
+	}
+	fmt.Println("nah")
+	fmt.Println(cniConfig.Cilium.SkipUpgrade)
+
 	if cniConfig.Cilium != nil {
 		cniPluginSpecified++
 		if err := validateCiliumConfig(cniConfig.Cilium); err != nil {
