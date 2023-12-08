@@ -145,10 +145,11 @@ func (e *ClusterE2ETest) ValidateEtcdEncryption() {
 		"get", fmt.Sprintf("/registry/secrets/default/%s", secretName), "| hexdump -C",
 	}
 	for _, etcdIP := range etcdIPs {
-		out, err := ssh.RunCommand(ctx, SSHKeyPath, getSSHUsernameByProvider(e.Provider.Name()), etcdIP, cmd...)
+		o, err := ssh.RunCommand(ctx, SSHKeyPath, getSSHUsernameByProvider(e.Provider.Name()), etcdIP, cmd...)
 		if err != nil {
 			e.T.Fatalf("Error verifying the secret is encrypted in etcd: %v", err)
 		}
+		out := o.String()
 		e.T.Log(out)
 		if strings.Contains(out, secretVal) && !strings.Contains(out, "k8s:enc:kms:v1") {
 			e.T.Fatal("The secure secret is not encrypted")

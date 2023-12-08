@@ -84,7 +84,7 @@ func (e *ClusterE2ETest) validateNTP(ctx context.Context, osFamily v1alpha1.OSFa
 	}
 
 	for _, server := range GetNTPServersFromEnv() {
-		if !strings.Contains(out, server) {
+		if !strings.Contains(out.String(), server) {
 			e.T.Fatalf("NTP Server [%s] not configured on machine", server)
 		}
 		e.T.Logf("NTP server [%s] is configured", server)
@@ -117,7 +117,7 @@ func (e *ClusterE2ETest) validateBottlerocketKubernetesSettings(ctx context.Cont
 		e.T.Errorf("failed to validate Bottlerocket Kubernetes settings: %v", err)
 	}
 
-	if strings.Contains(gotHostname, "etcd") {
+	if strings.Contains(gotHostname.String(), "etcd") {
 		e.T.Log("Skipping Bottlerocket Kubernetes settings validation for etcd node")
 		return
 	}
@@ -146,20 +146,20 @@ func (e *ClusterE2ETest) validateBottlerocketKubernetesSettings(ctx context.Cont
 	}
 
 	for _, sysctl := range expectedAllowedUnsafeSysctls {
-		if !strings.Contains(gotAllowedUnsafeSysctls, sysctl) {
+		if !strings.Contains(gotAllowedUnsafeSysctls.String(), sysctl) {
 			e.T.Errorf("Bottlerocket Kubernetes setting [allowed-unsafe-sysctls: %s] not configured on machine", sysctl)
 		}
 		e.T.Logf("Bottlerocket Kubernetes setting [allowed-unsafe-sysctls: %s] is configured", sysctl)
 	}
 
 	for _, ip := range expectedClusterDNSIPs {
-		if !strings.Contains(gotClusterDNSIPs, ip) {
+		if !strings.Contains(gotClusterDNSIPs.String(), ip) {
 			e.T.Errorf("Bottlerocket Kubernetes setting [cluster-dns-ips: %s] not configured on machine", ip)
 		}
 		e.T.Logf("Bottlerocket Kubernetes setting [cluster-dns-ips: %s] is configured", ip)
 	}
 
-	if !strings.Contains(gotMaxPods, strconv.Itoa(expectedMaxPods)) {
+	if !strings.Contains(gotMaxPods.String(), strconv.Itoa(expectedMaxPods)) {
 		e.T.Errorf("Bottlerocket Kubernetes setting [max-pods: %d] not configured on machine", expectedMaxPods)
 	}
 

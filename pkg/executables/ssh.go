@@ -1,6 +1,7 @@
 package executables
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 )
@@ -23,7 +24,7 @@ func NewSSH(executable Executable) *SSH {
 }
 
 // RunCommand runs a command on the host using SSH.
-func (s *SSH) RunCommand(ctx context.Context, privateKeyPath, username, IP string, command ...string) (string, error) {
+func (s *SSH) RunCommand(ctx context.Context, privateKeyPath, username, IP string, command ...string) (bytes.Buffer, error) {
 	params := []string{
 		"-i", privateKeyPath,
 		"-o", strictHostCheckFlag,
@@ -33,8 +34,8 @@ func (s *SSH) RunCommand(ctx context.Context, privateKeyPath, username, IP strin
 
 	out, err := s.Executable.Execute(ctx, params...)
 	if err != nil {
-		return "", fmt.Errorf("running SSH command: %v", err)
+		return bytes.Buffer{}, fmt.Errorf("running SSH command: %v", err)
 	}
 
-	return out.String(), nil
+	return out, nil
 }
